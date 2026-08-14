@@ -1,4 +1,10 @@
 node_modules/
 .env
+.env.local
 *.log
-dist/
+.next/
+out/
+build/
+.gradle/
+*.class
+.DS_Store

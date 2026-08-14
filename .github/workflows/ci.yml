@@ -1,0 +1,95 @@
+# MediCore HMS — continuous verification.
+# This is the project's primary verification gate for the Spring layer: the Java
+# backend was authored in an environment without Maven Central access (verified
+# there via framework-free javac harnesses + real Postgres for SQL), so the first
+# green run of this workflow is the first full compile + test of the Spring code.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server-java:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: medicore
+          POSTGRES_PASSWORD: medicore_dev
+          POSTGRES_DB: medicore_java
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U medicore"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Unit + integration tests (Testcontainers-free; uses the service DB)
+        working-directory: server-java
+        env:
+          MEDICORE_IT: 'true'
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medicore_java
+          SPRING_DATASOURCE_USERNAME: medicore
+          SPRING_DATASOURCE_PASSWORD: medicore_dev
+        run: gradle test --no-daemon
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-java-test-report
+          path: server-java/build/reports/tests/test
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build (type-checks all routes)
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+  server-node-reference:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: medicore
+          POSTGRES_PASSWORD: medicore_dev
+          POSTGRES_DB: medicore
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U medicore"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: M1 reference test suite
+        working-directory: server
+        env:
+          DATABASE_URL: postgres://medicore:medicore_dev@localhost:5432/medicore
+          SESSION_SECRET: ci-only-secret
+        run: |
+          npm ci
+          npm run migrate
+          npm run seed
+          npm test
