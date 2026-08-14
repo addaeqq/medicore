@@ -82,6 +82,19 @@ docker run -p 4000:4000 -e DB_URL=jdbc:postgresql://host.docker.internal:5432/me
 - **Tests added:** `FefoAllocatorTest` (6 pure), `ClinicalPharmacyIT` (sign-lock + FEFO
   order + concurrent-dispense race, gated by `MEDICORE_IT=true`).
 
+## Milestone 3 — gateway-independent half (this increment)
+- **Invoicing (DD-05):** draft -> issued lifecycle; append-only line items; charges posted
+  from the consultation fee and dispensed medication (idempotent per source); totals,
+  balance and status always computed from the durable record (`BillingMath`, pure).
+- **Payments:** manual cash/POS capture by billing clerks; online payments initialised
+  through the `PaymentGateway` port. **Crediting is gated by `PaymentVerifier`
+  (NFR-SEC-06, pure): the callback body never credits — only a successful, amount-exact
+  independent `verifyStatus` round-trip does.** Replayed callbacks are idempotent.
+- **Void (FR-BIL-07):** management-only, mandatory reason, blocked once money is captured.
+- **Still pending for M3 completion (OI-5):** the `ItcGatewayAdapter` implementation and
+  the exact callback path/shape, once the ITC API specification is shared; plus email
+  notifications. `BillingIT` proves the flow end-to-end against a conformant stub gateway.
+
 ## Verification status (honest record for the testing report)
 Authored in a sandbox where Maven Central is unreachable, so the Spring layer could not
 be compiled there. What **was** machine-verified at authoring time:

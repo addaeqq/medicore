@@ -41,4 +41,9 @@ public interface Repositories {
         java.util.List<PrescriptionItem> findByPrescriptionId(UUID prescriptionId);
     }
     interface DispenseRepository extends JpaRepository<Dispense, UUID> {}
+    interface InvoiceRepository extends JpaRepository<Invoice, UUID> {}
+    interface InvoiceItemRepository extends JpaRepository<InvoiceItem, UUID> {}
+    interface PaymentRepository extends JpaRepository<Payment, UUID> {
+        Optional<Payment> findByGatewayRef(String gatewayRef);
+    }
 }
