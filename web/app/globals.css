@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* MediCore design tokens — "hospital paperwork, made digital".
+   Chart-paper ground, ledger ink, theatre-green primary, ward-amber pending,
+   triage-red errors. Serif display for headings (printed-letterhead feel),
+   monospace for chart numbers, amounts and payment references. */
+:root {
+  --paper: #f6f7f5;
+  --ink: #16211c;
+  --theatre: #0e6e5c;
+  --theatre-deep: #0a5748;
+  --amber: #b7791f;
+  --triage: #b3402a;
+  --hairline: #e2e6e3;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.font-display {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.font-chart {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* The patient band: wristband strip with a perforated (dashed) fastening edge. */
+.patient-band {
+  border: 1px solid var(--hairline);
+  border-left: 4px double var(--theatre);
+  background: #fff;
+  position: relative;
+}
+.patient-band::after {
+  content: "";
+  position: absolute;
+  right: 10px; top: 6px; bottom: 6px;
+  border-right: 2px dashed var(--hairline);
+}
+
+:focus-visible { outline: 2px solid var(--theatre); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

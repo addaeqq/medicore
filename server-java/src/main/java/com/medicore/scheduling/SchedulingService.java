@@ -129,6 +129,19 @@ public class SchedulingService {
             """, departmentId);
     }
 
+    /** FR-APT-06: a patient's appointments with slot and doctor context. */
+    public List<Map<String, Object>> patientAppointments(UUID patientId) {
+        return jdbc.queryForList("""
+            SELECT a.appointment_id, a.status, a.booked_at, sl.starts_at, sl.ends_at,
+                   st.full_name AS doctor, d.name AS department
+            FROM appointments a
+            JOIN slots sl ON sl.slot_id = a.slot_id
+            JOIN staff st ON st.staff_id = sl.doctor_id
+            JOIN departments d ON d.department_id = a.department_id
+            WHERE a.patient_id = ? ORDER BY sl.starts_at DESC LIMIT 100
+            """, patientId);
+    }
+
     /** FR-APT-03: browse available future slots. */
     public List<Map<String, Object>> availableSlots(UUID doctorId, UUID departmentId) {
         StringBuilder sql = new StringBuilder("""

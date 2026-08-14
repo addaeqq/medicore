@@ -88,6 +88,13 @@ public class ClinicalController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("addendumId", a.getAddendumId()));
     }
 
+    // Consultation detail for the clinical workspace (emr.read scope applies)
+    @GetMapping("/consultations/{id}")
+    public Map<String, Object> consultation(@PathVariable UUID id, HttpServletRequest req) {
+        policy.authorize(req.getSession(false), "emr.read", PolicyContext.patient(patientOfConsultation(id)));
+        return clinical.consultationDetail(id);
+    }
+
     // FR-EMR-01/06
     @GetMapping("/patients/{patientId}/emr")
     public Map<String, Object> emr(@PathVariable UUID patientId, HttpServletRequest req) {

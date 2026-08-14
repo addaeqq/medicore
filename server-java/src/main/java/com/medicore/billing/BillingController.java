@@ -116,6 +116,13 @@ public class BillingController {
         return Map.of("invoices", billing.patientInvoices(patientId));
     }
 
+    /** Chargeable sources for a patient (billing workspace). */
+    @GetMapping("/patients/{patientId}/billables")
+    public Map<String, Object> billables(@PathVariable UUID patientId, HttpServletRequest req) {
+        policy.authorize(req.getSession(false), "invoice.manage", PolicyContext.none());
+        return billing.patientBillables(patientId);
+    }
+
     // FR-BIL-03: online payment via the PaymentGateway port (DD-07)
     @PostMapping("/payments/init")
     public ResponseEntity<Map<String, Object>> init(@Valid @RequestBody InitPaymentRequest r,

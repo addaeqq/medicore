@@ -278,6 +278,32 @@ public class BillingService {
 
     public UUID patientOf(UUID invoiceId) { return require(invoiceId).getPatientId(); }
 
+    /** Chargeable sources for the billing workspace: signed consultations and dispensed prescriptions. */
+    public Map<String, Object> patientBillables(UUID patientId) {
+        List<Map<String, Object>> consults = jdbc.queryForList("""
+            SELECT c.consultation_id, c.signed_at, d.name AS department, d.consult_fee,
+                   s.full_name AS doctor
+            FROM consultations c
+            JOIN staff s ON s.staff_id = c.doctor_id
+            JOIN departments d ON d.department_id = s.department_id
+            WHERE c.patient_id = ? AND c.signed_at IS NOT NULL
+            ORDER BY c.signed_at DESC LIMIT 50
+            """, patientId);
+        List<Map<String, Object>> rx = jdbc.queryForList("""
+            SELECT p.prescription_id, p.status, p.created_at,
+                   COALESCE(sum(ds.qty * d.unit_price), 0) AS dispensed_value
+            FROM prescriptions p
+            JOIN prescription_items i ON i.prescription_id = p.prescription_id
+            JOIN drugs d ON d.drug_id = i.drug_id
+            LEFT JOIN dispenses ds ON ds.rx_item_id = i.rx_item_id
+            WHERE p.patient_id = ?
+            GROUP BY p.prescription_id, p.status, p.created_at
+            HAVING COALESCE(sum(ds.qty), 0) > 0
+            ORDER BY p.created_at DESC LIMIT 50
+            """, patientId);
+        return Map.of("consultations", consults, "prescriptions", rx);
+    }
+
     // ---------- internals ----------
 
     private Invoice require(UUID invoiceId) {

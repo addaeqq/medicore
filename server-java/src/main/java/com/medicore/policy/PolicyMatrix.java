@@ -20,7 +20,7 @@ public final class PolicyMatrix {
     public static final Map<String, Map<String, Scope>> MATRIX = Map.ofEntries(
         // --- Patients & registration ---
         entry("patient.register_walkin", Map.of("receptionist", ANY, "sys_admin", ANY)),
-        entry("patient.read_profile",    Map.of("patient", OWN, "receptionist", ANY, "doctor", RELATIONSHIP, "nurse", WARD, "sys_admin", ANY)),
+        entry("patient.read_profile",    Map.of("patient", OWN, "receptionist", ANY, "doctor", RELATIONSHIP, "nurse", WARD, "billing_clerk", ANY, "sys_admin", ANY)), // clerk: demographics for billing (v1.4 UI)
         entry("patient.update_profile",  Map.of("patient", OWN, "receptionist", ANY)),
 
         // --- Scheduling & appointments ---

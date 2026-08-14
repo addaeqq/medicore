@@ -72,6 +72,13 @@ public class AppointmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("queueEntryId", entry.getQueueEntryId()));
     }
 
+    // FR-APT-06: a patient's appointment history (patient OWN / receptionist / doctor RELATIONSHIP)
+    @GetMapping("/patient/{patientId}")
+    public Map<String, Object> byPatient(@PathVariable UUID patientId, HttpServletRequest req) {
+        policy.authorize(req.getSession(false), "appointment.list", com.medicore.policy.PolicyContext.patient(patientId));
+        return Map.of("appointments", scheduling.patientAppointments(patientId));
+    }
+
     // FR-APT-08
     @GetMapping("/queue/{departmentId}")
     public Map<String, Object> queue(@PathVariable UUID departmentId, HttpServletRequest req) {

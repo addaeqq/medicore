@@ -5,7 +5,7 @@ server:
       timeout: 30m                    # FR-AUTH-08
       cookie:
         http-only: true               # DD-02
-        same-site: lax
+        same-site: ${COOKIE_SAMESITE:lax}   # 'none' + secure=true if API and web are on different origins
         secure: ${COOKIE_SECURE:false}   # true in production (NFR-SEC-01)
 
 spring:

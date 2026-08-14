@@ -65,4 +65,22 @@ router.get('/queue/:departmentId', authorize('queue.view'), async (req, res, nex
   catch (e) { next(e); }
 });
 
+
+// FR-APT-06: patient appointment history (mirrors the Java backend's UI endpoint)
+router.get('/patient/:patientId',
+  authorize('appointment.list', (req) => ({ patientId: req.params.patientId })),
+  async (req, res, next) => {
+    try {
+      const appointments = await db('appointments as a')
+        .join('slots as sl', 'sl.slot_id', 'a.slot_id')
+        .join('staff as st', 'st.staff_id', 'sl.doctor_id')
+        .join('departments as d', 'd.department_id', 'a.department_id')
+        .where('a.patient_id', req.params.patientId)
+        .select('a.appointment_id', 'a.status', 'a.booked_at', 'sl.starts_at', 'sl.ends_at',
+          'st.full_name as doctor', 'd.name as department')
+        .orderBy('sl.starts_at', 'desc').limit(100);
+      res.json({ appointments });
+    } catch (e) { next(e); }
+  });
+
 module.exports = router;

@@ -144,6 +144,28 @@ public class ConsultationService {
         return Map.of("consultations", cons, "addendums", adds, "allergies", allergyRows, "prescriptions", rx);
     }
 
+    /** One consultation with its addendums and patient band data, for the clinical workspace. */
+    public Map<String, Object> consultationDetail(UUID consultationId) {
+        Map<String, Object> head = jdbc.queryForList("""
+            SELECT c.consultation_id, c.patient_id, c.appointment_id, c.complaint, c.findings,
+                   c.diagnosis, c.signed_at, c.created_at, s.full_name AS doctor, s.staff_id AS doctor_id,
+                   p.full_name AS patient_name, p.mrn, p.dob, p.sex
+            FROM consultations c
+            JOIN staff s ON s.staff_id = c.doctor_id
+            JOIN patients p ON p.patient_id = c.patient_id
+            WHERE c.consultation_id = ?
+            """, consultationId).stream().findFirst()
+            .orElseThrow(() -> new ApiException(404, "Consultation not found"));
+        List<Map<String, Object>> adds = jdbc.queryForList("""
+            SELECT a.addendum_id, a.body, a.created_at, s.full_name AS author
+            FROM addendums a JOIN staff s ON s.staff_id = a.author_id
+            WHERE a.consultation_id = ? ORDER BY a.created_at
+            """, consultationId);
+        Map<String, Object> out = new java.util.HashMap<>(head);
+        out.put("addendums", adds);
+        return out;
+    }
+
     private Consultation requireAuthored(UUID consultationId, SessionUser doctor) {
         Consultation c = consultations.findById(consultationId)
             .orElseThrow(() -> new ApiException(404, "Consultation not found"));
