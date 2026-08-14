@@ -95,6 +95,28 @@ docker run -p 4000:4000 -e DB_URL=jdbc:postgresql://host.docker.internal:5432/me
   the exact callback path/shape, once the ITC API specification is shared; plus email
   notifications. `BillingIT` proves the flow end-to-end against a conformant stub gateway.
 
+## ITC Transflow Checkout (SRS OI-5 — resolved)
+The `ItcGatewayAdapter` implements the received API Definition:
+`POST /request-payments` -> redirect the payer to `data.checkoutUrl`; ITC calls back to
+`/api/payments/callback` (`refNo` = our stored `transactionReference`; the endpoint always
+answers HTTP 200 per the spec); crediting happens only via `POST /check-transaction-status`
+(success = outer 200 **and** `data.responseCode == "01"`) plus the exact-amount rule in
+`PaymentVerifier`. If a callback never arrives, `POST /api/payments/{id}/verify` re-runs the
+same verification (spec §3). Response-shape mapping is pure (`ItcResponseMapper`) and
+unit-verified against the sample payloads in the vendor document.
+
+Configuration (all via env):
+| Var | Purpose |
+|---|---|
+| `ITC_BASE_URL` | defaults to UAT `https://apisuat.itcsrvc.com/checkout`; LIVE is `https://apis.itcsrvc.com/checkout` |
+| `ITC_API_KEY`, `ITC_MERCHANT_PRODUCT_ID`, `ITC_TRANSFLOW_ID` | merchant credentials (required; adapter answers 503 until set) |
+| `ITC_CALLBACK_URL` | public URL of `/api/payments/callback` |
+| `ITC_SUCCESS_URL` / `ITC_FAILURE_URL` | front-end redirect landing pages |
+
+UAT test data (from the vendor document): mobile money — any registered number with small
+amounts (e.g. GHS 0.10); card success — PAN 5123450000000008, CVV 100, expiry 01/39;
+card failure — PAN 3528000000000007, CVV 101, expiry 05/39.
+
 ## Verification status (honest record for the testing report)
 Authored in a sandbox where Maven Central is unreachable, so the Spring layer could not
 be compiled there. What **was** machine-verified at authoring time:

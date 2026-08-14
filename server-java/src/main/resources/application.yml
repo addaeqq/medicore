@@ -25,6 +25,17 @@ spring:
 
 medicore:
   cors-origin: ${CORS_ORIGIN:http://localhost:3000}
+  itc:                                # ITC Transflow Checkout (SRS OI-5 resolved; DD-07 adapter)
+    base-url: ${ITC_BASE_URL:https://apisuat.itcsrvc.com/checkout}   # UAT default; LIVE: https://apis.itcsrvc.com/checkout
+    api-key: ${ITC_API_KEY:}
+    merchant-product-id: ${ITC_MERCHANT_PRODUCT_ID:}
+    transflow-id: ${ITC_TRANSFLOW_ID:}
+    currency: ${ITC_CURRENCY:GHS}
+    callback-url: ${ITC_CALLBACK_URL:http://localhost:4000/api/payments/callback}
+    success-redirect-url: ${ITC_SUCCESS_URL:http://localhost:3000/payments/success}
+    failure-redirect-url: ${ITC_FAILURE_URL:http://localhost:3000/payments/failure}
+    page-title: ${ITC_PAGE_TITLE:MediCore HMS}
+    logo: ${ITC_LOGO:}
   seed: ${MEDICORE_SEED:false}
   cancel-cutoff-hours: 2              # FR-APT-05
   lockout:

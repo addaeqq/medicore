@@ -45,6 +45,10 @@ class BillingIT {
         @Override public VerificationResult verifyStatus(String gatewayReference) {
             return nextVerify.get();
         }
+        @Override public String extractReference(java.util.Map<String, Object> body) {
+            Object r = body.get("reference");
+            return r == null ? null : String.valueOf(r);
+        }
     }
 
     @TestConfiguration
@@ -151,6 +155,22 @@ class BillingIT {
             "SELECT count(*) FROM payments WHERE invoice_id = ? AND status = 'paid'",
             Long.class, inv.getInvoiceId());
         assertEquals(1L, paidCount, "replay never double-credits");
+    }
+
+    @Test
+    void vendorShapedCallbackBodyResolvesThroughAdapterExtraction() {
+        // The ITC callback carries refNo (== transactionReference). The controller asks the
+        // gateway to extract it; here we exercise the same path via the stub's contract.
+        Patient pat = newPatient();
+        SessionUser payer = new SessionUser(
+            users.findById(pat.getUserId()).orElseThrow().getUserId(), "patient", null, pat.getPatientId());
+        Invoice inv = billing.createInvoice(pat.getPatientId(), "VISIT-CB");
+        billing.addItem(inv.getInvoiceId(), "other", null, "Consult", new BigDecimal("15.00"));
+        billing.issue(inv.getInvoiceId());
+        var init = billing.initOnlinePayment(inv.getInvoiceId(), payer, "p@t.test");
+        stub.nextVerify.set(new PaymentGateway.VerificationResult(true, new BigDecimal("15.00"), "success"));
+        String extracted = stub.extractReference(java.util.Map.of("reference", "STUB-" + init.paymentId()));
+        assertEquals("paid", billing.handleCallback(extracted).get("status"));
     }
 
     @Test

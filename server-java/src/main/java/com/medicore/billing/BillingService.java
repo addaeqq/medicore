@@ -168,8 +168,17 @@ public class BillingService {
         Payment p = new Payment(invoiceId, "itc", balance);
         payments.save(p); // pending
 
+        Map<String, Object> contact = jdbc.queryForList("""
+            SELECT pt.full_name, u.email FROM patients pt
+            LEFT JOIN users u ON u.user_id = pt.user_id
+            WHERE pt.patient_id = ?
+            """, inv.getPatientId()).stream().findFirst().orElse(Map.of());
+        String name = (String) contact.get("full_name");
+        String email = (customerEmail != null && !customerEmail.isBlank())
+            ? customerEmail : (String) contact.get("email");
+
         PaymentGateway.PaymentInstruction instruction = gateway.requestPayment(
-            new PaymentGateway.PaymentRequest(invoiceId, p.getPaymentId().toString(), balance, customerEmail));
+            new PaymentGateway.PaymentRequest(invoiceId, p.getPaymentId().toString(), balance, name, email));
         p.setGatewayRef(instruction.gatewayReference());
         payments.save(p);
         audit.log(payer.userId(), inv.getPatientId(), "payment.init",
@@ -184,7 +193,23 @@ public class BillingService {
      */
     @Transactional
     public Map<String, Object> handleCallback(String reference) {
-        Payment p = findByReference(reference);
+        return verifyInternal(findByReference(reference));
+    }
+
+    /** §3 of the ITC spec: re-verify when a callback never arrived. Same credit rule. */
+    @Transactional
+    public Map<String, Object> verifyPayment(UUID paymentId) {
+        return verifyInternal(payments.findById(paymentId)
+            .orElseThrow(() -> new ApiException(404, "Payment not found")));
+    }
+
+    public UUID patientOfPayment(UUID paymentId) {
+        Payment p = payments.findById(paymentId)
+            .orElseThrow(() -> new ApiException(404, "Payment not found"));
+        return require(p.getInvoiceId()).getPatientId();
+    }
+
+    private Map<String, Object> verifyInternal(Payment p) {
         if ("paid".equals(p.getStatus()))
             return Map.of("status", "paid", "note", "already credited (replay ignored)");
 

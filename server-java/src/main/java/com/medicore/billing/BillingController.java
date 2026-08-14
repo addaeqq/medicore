@@ -19,9 +19,11 @@ import java.util.UUID;
 public class BillingController {
     private final BillingService billing;
     private final PolicyService policy;
+    private final com.medicore.payments.PaymentGateway gateway;
 
-    public BillingController(BillingService billing, PolicyService policy) {
-        this.billing = billing; this.policy = policy;
+    public BillingController(BillingService billing, PolicyService policy,
+                             com.medicore.payments.PaymentGateway gateway) {
+        this.billing = billing; this.policy = policy; this.gateway = gateway;
     }
 
     public record CreateInvoiceRequest(@NotNull UUID patientId, String visitRef) {}
@@ -35,7 +37,6 @@ public class BillingController {
                                        @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal amount) {}
     public record VoidRequest(@NotBlank String reason) {}
     public record InitPaymentRequest(@NotNull UUID invoiceId, String email) {}
-    public record CallbackRequest(@NotBlank String reference) {}
 
     // FR-BIL-01
     @PostMapping("/invoices")
@@ -127,13 +128,32 @@ public class BillingController {
     }
 
     /**
-     * Gateway callback (Fig. 8). Unauthenticated by design — the gateway is not a session
-     * holder. Safe because the body is untrusted: crediting requires the independent
-     * verifyStatus round-trip (NFR-SEC-06). Exact path/shape may be adjusted to the ITC
-     * specification at M3 completion (OI-5).
+     * ITC Transflow callback (Fig. 8; API Definition §2). Unauthenticated by design — the
+     * gateway is not a session holder, and the body is treated as untrusted: crediting
+     * requires the independent check-transaction-status round-trip (NFR-SEC-06).
+     * Per the spec, this endpoint ALWAYS answers HTTP 200 with a JSON body, even on
+     * failure, so ITC does not retry storms; unverifiable payments simply stay pending
+     * and are settled by /payments/{id}/verify.
      */
     @PostMapping("/payments/callback")
-    public Map<String, Object> callback(@Valid @RequestBody CallbackRequest r) {
-        return billing.handleCallback(r.reference());
+    public Map<String, Object> callback(@RequestBody Map<String, Object> body) {
+        try {
+            String reference = gateway.extractReference(body);
+            if (reference == null) return Map.of("received", true, "status", "ignored");
+            Object status = billing.handleCallback(reference).get("status");
+            return Map.of("received", true, "status", String.valueOf(status));
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(BillingController.class)
+                .warn("callback processing failed: {}", e.getMessage());
+            return Map.of("received", true, "status", "pending");
+        }
+    }
+
+    /** ITC spec §3: verify when no callback arrived within the expected window. */
+    @PostMapping("/payments/{paymentId}/verify")
+    public Map<String, Object> verify(@PathVariable UUID paymentId, HttpServletRequest req) {
+        policy.authorize(req.getSession(false), "invoice.read",
+            PolicyContext.grant(billing.patientOfPayment(paymentId), "billing"));
+        return billing.verifyPayment(paymentId);
     }
 }
