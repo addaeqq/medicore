@@ -36,6 +36,9 @@ public final class PolicyMatrix {
         // --- EMR (clinical core) ---
         entry("emr.read",      Map.of("doctor", RELATIONSHIP, "patient", OWN)),
         entry("emr.write",     Map.of("doctor", RELATIONSHIP)),
+        // Addendums attach to completed encounters where the active relationship may have
+        // ended; the service layer enforces author == consultation.doctor (FR-EMR-04).
+        entry("emr.addendum",  Map.of("doctor", ANY)),
         entry("vitals.write",  Map.of("nurse", WARD, "doctor", RELATIONSHIP)),
         entry("vitals.read",   Map.of("doctor", RELATIONSHIP, "nurse", WARD, "patient", OWN)),
         entry("allergy.read",  Map.of("doctor", RELATIONSHIP, "nurse", WARD, "pharmacist", ANY, "patient", OWN)),
@@ -80,7 +83,7 @@ public final class PolicyMatrix {
 
     /** Clinical actions whose every access is audit-logged (FR-EMR-06). */
     public static final Set<String> AUDITED_ACTIONS = Set.of(
-        "emr.read", "emr.write", "vitals.read", "vitals.write", "allergy.read", "allergy.write",
+        "emr.read", "emr.write", "emr.addendum", "vitals.read", "vitals.write", "allergy.read", "allergy.write",
         "rx.read", "rx.write", "rx.dispense", "lab.read_released", "lab.release", "granted.read"
     );
 }

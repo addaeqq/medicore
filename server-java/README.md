@@ -69,6 +69,19 @@ docker run -p 4000:4000 -e DB_URL=jdbc:postgresql://host.docker.internal:5432/me
   runs with `ddl-auto: none`. Status columns are TEXT + CHECK (not PG enums) for clean
   JPA mapping — constraint-equivalent.
 
+## Milestone 2 (this increment)
+- **EMR:** consultation lifecycle — start from a checked-in appointment (queue moves to
+  `in_consultation`), notes, **sign-and-lock** (service check + V4 trigger backstop),
+  post-signature **addendums** (author-only; action `emr.addendum`), allergies, and the
+  patient EMR read model.
+- **Pharmacy:** drug catalogue, batch intake, pharmacist worklist, and **FEFO dispensing**
+  (Design Fig. 7): `FefoAllocator` is a pure, unit-tested function; the service locks batch
+  rows (`SELECT ... FOR UPDATE`), applies guarded decrements
+  (`... AND qty_on_hand >= ?`), and the schema `CHECK (qty_on_hand >= 0)` is the final
+  backstop. Low-stock report per reorder level.
+- **Tests added:** `FefoAllocatorTest` (6 pure), `ClinicalPharmacyIT` (sign-lock + FEFO
+  order + concurrent-dispense race, gated by `MEDICORE_IT=true`).
+
 ## Verification status (honest record for the testing report)
 Authored in a sandbox where Maven Central is unreachable, so the Spring layer could not
 be compiled there. What **was** machine-verified at authoring time:

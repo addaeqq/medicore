@@ -27,4 +27,18 @@ public interface Repositories {
         long countBySlotId(UUID slotId);
     }
     interface QueueEntryRepository extends JpaRepository<QueueEntry, UUID> {}
+    interface ConsultationRepository extends JpaRepository<Consultation, UUID> {}
+    interface AddendumRepository extends JpaRepository<Addendum, UUID> {}
+    interface AllergyRepository extends JpaRepository<Allergy, UUID> {
+        java.util.List<Allergy> findByPatientId(UUID patientId);
+    }
+    interface DrugRepository extends JpaRepository<Drug, UUID> {
+        Optional<Drug> findByGenericNameAndStrength(String genericName, String strength);
+    }
+    interface StockBatchRepository extends JpaRepository<StockBatch, UUID> {}
+    interface PrescriptionRepository extends JpaRepository<Prescription, UUID> {}
+    interface PrescriptionItemRepository extends JpaRepository<PrescriptionItem, UUID> {
+        java.util.List<PrescriptionItem> findByPrescriptionId(UUID prescriptionId);
+    }
+    interface DispenseRepository extends JpaRepository<Dispense, UUID> {}
 }

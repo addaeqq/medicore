@@ -72,6 +72,27 @@ public class SeedRunner implements CommandLineRunner {
                     LocalTime.of(9, 0), LocalTime.of(12, 0), 20, "C1", 28);
             }
         }
+        // M2: pharmacy catalogue + stock (idempotent by generic_name)
+        Long drugCount = jdbc.queryForObject("SELECT count(*) FROM drugs", Long.class);
+        if (drugCount != null && drugCount == 0) {
+            jdbc.update("""
+                INSERT INTO drugs (generic_name, brand_name, form, strength, unit_price, reorder_level)
+                VALUES ('Paracetamol', 'Panadol', 'tablet', '500mg', 0.50, 50),
+                       ('Amoxicillin', NULL, 'capsule', '250mg', 1.20, 30),
+                       ('Artemether/Lumefantrine', 'Coartem', 'tablet', '20/120mg', 3.00, 20)
+                """);
+            jdbc.update("""
+                INSERT INTO stock_batches (drug_id, batch_no, expiry_date, qty_on_hand, unit_cost)
+                SELECT drug_id, 'SEED-' || substr(generic_name, 1, 4) || '-1', CURRENT_DATE + 60, 40, unit_price * 0.6
+                FROM drugs
+                """);
+            jdbc.update("""
+                INSERT INTO stock_batches (drug_id, batch_no, expiry_date, qty_on_hand, unit_cost)
+                SELECT drug_id, 'SEED-' || substr(generic_name, 1, 4) || '-2', CURRENT_DATE + 300, 100, unit_price * 0.55
+                FROM drugs
+                """);
+        }
+
         System.out.println("Seed complete. Demo logins (password: Password123!): admin@ / doctor@ / " +
             "reception@ / pharmacist@ / billing@ / management@ / patient@medicore.test");
     }
