@@ -13,4 +13,4 @@ Kelvin Addae Kwarteng · 22427564
 docker compose up --build   # web :3000, api :4000, postgres :5433 — see DEPLOYMENT.md
 ```
 
-Documents: SRS v1.3 · Effort Estimation (UCP) v1.0 · Design v1.8 · Testing Report v1.5 · Debt Ledger v1.4 · User Manual v1.1 · Maintenance Plan v1.2.
+Documents: **Project Documentation v1.0** (start here) · SRS v1.3 · Effort Estimation (UCP) v1.0 · Design v1.8 · Testing Report v1.5 · Debt Ledger v1.4 · User Manual v1.1 · Maintenance Plan v1.2.
