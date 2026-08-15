@@ -9,8 +9,6 @@
 #
 # Every value below can be overridden from a local `.env` (see .env.example);
 # the defaults here are the demo settings, so plain `docker compose up` works.
-# `server/` (the frozen Node M1 reference) is deliberately not part of this stack —
-# it shares table names with the Flyway schema and is run only via its test suite.
 services:
   db:
     image: postgres:16

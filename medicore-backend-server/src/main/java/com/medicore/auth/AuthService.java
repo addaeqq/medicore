@@ -26,15 +26,16 @@ public class AuthService {
     private final StaffRepository staff;
     private final PasswordEncoder encoder;
     private final AuditService audit;
+    private final LoginAttempts attempts;
     private final int maxAttempts;
     private final int windowMinutes;
 
     public AuthService(UserRepository users, PatientRepository patients, StaffRepository staff,
-                       PasswordEncoder encoder, AuditService audit,
+                       PasswordEncoder encoder, AuditService audit, LoginAttempts attempts,
                        @Value("${medicore.lockout.max-attempts:5}") int maxAttempts,
                        @Value("${medicore.lockout.window-minutes:15}") int windowMinutes) {
         this.users = users; this.patients = patients; this.staff = staff;
-        this.encoder = encoder; this.audit = audit;
+        this.encoder = encoder; this.audit = audit; this.attempts = attempts;
         this.maxAttempts = maxAttempts; this.windowMinutes = windowMinutes;
     }
 
@@ -64,18 +65,13 @@ public class AuthService {
             throw new ApiException(423, "Account temporarily locked. Try again later."); // FR-AUTH-06
 
         if (!encoder.matches(rawPassword, user.getPasswordHash())) {
-            int attempts = user.getFailedLogins() + 1;
-            user.setFailedLogins(attempts);
-            if (attempts >= maxAttempts)
-                user.setLockedUntil(Instant.now().plus(Duration.ofMinutes(windowMinutes)));
-            users.save(user);
-            audit.log(user.getUserId(), null, "auth.login_failed", null, "{\"attempts\":" + attempts + "}");
+            // Counted in its own transaction: throwing below rolls this one back, which
+            // silently discarded the count and left the account unlockable (FR-AUTH-06).
+            attempts.recordFailure(user.getUserId(), maxAttempts, windowMinutes);
             throw new ApiException(401, "Invalid email or password");
         }
 
-        user.setFailedLogins(0);
-        user.setLockedUntil(null);
-        users.save(user);
+        attempts.recordSuccess(user.getUserId());
         var staffRow = staff.findByUserId(user.getUserId()).orElse(null);
         var patientRow = patients.findByUserId(user.getUserId()).orElse(null);
         audit.log(user.getUserId(), null, "auth.login", null, null);

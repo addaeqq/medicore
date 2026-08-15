@@ -1,10 +1,11 @@
 # MediCore HMS — Deployment Guide
 
 Two deployable services: **`web`** (Next.js) and **`medicore-backend-server`**
-(Spring Boot), against one PostgreSQL. `server/` — the frozen Node M1 reference —
-is **not deployed**: it implements the same M1 contract over the same table names,
-so it would collide with the Flyway schema. It stays in the repo as the executable
-specification and runs only through its test suite (`npm test`) and CI.
+(Spring Boot), against one PostgreSQL.
+
+(The Node.js Milestone 1 reference implementation was retired in Design v1.7. It
+was never deployed, and the auth behaviour it verified is now covered by `AuthIT`
+in the Java suite. It remains in the repository history.)
 
 ## 1. Local full stack (graders, demos)
 ```bash
@@ -70,9 +71,9 @@ The API defaults to `jdbc:postgresql://localhost:5432/medicore`; point `DB_URL` 
 
 ## 3. Cloud — Railway
 
-One project, three services: **Postgres**, **api**, **web**. Railway builds from a
-GitHub repo, so push this tree first (the working copy ships as `medicore.bundle`;
-`git clone medicore.bundle medicore && cd medicore && git remote add origin …`).
+One project, three services: **Postgres**, **api**, **web**, all built from this
+repository (its root is `medicore-complete/`, so the service root directories below
+carry no prefix).
 
 ### 3.1 Database
 New → Database → **Add PostgreSQL**. Nothing to configure; it exposes `PGHOST`,
@@ -83,7 +84,7 @@ New → GitHub Repo → this repo, then in **Settings**:
 
 | Setting | Value |
 |---|---|
-| Root Directory | `medicore-complete/medicore-backend-server` (drop the prefix if the repo root *is* `medicore-complete`) |
+| Root Directory | `medicore-backend-server` |
 | Builder | Dockerfile (auto-detected) |
 | Healthcheck Path | `/api/health` |
 | Networking → Generate Domain, target port | `4000` |
@@ -112,7 +113,7 @@ New → GitHub Repo → same repo, second service:
 
 | Setting | Value |
 |---|---|
-| Root Directory | `medicore-complete/web` |
+| Root Directory | `web` |
 | Builder | Dockerfile |
 | Networking → Generate Domain, target port | `3000` |
 

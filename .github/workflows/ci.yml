@@ -1,8 +1,10 @@
 # MediCore HMS — continuous verification.
-# This is the project's primary verification gate for the Spring layer: the Java
-# backend was authored in an environment without Maven Central access (verified
-# there via framework-free javac harnesses + real Postgres for SQL), so the first
-# green run of this workflow is the first full compile + test of the Spring code.
+# This is the project's verification gate: the Java backend was authored in an
+# environment without Maven Central access (verified there via framework-free javac
+# harnesses + real Postgres for SQL), so a green run of this workflow is the full
+# compile + test of the Spring code, integration tests included.
+# The Node.js Milestone 1 reference implementation was retired in Design v1.7; its
+# auth evidence now lives in AuthIT (see the Testing Report).
 name: CI
 
 on:
@@ -62,34 +64,3 @@ jobs:
         run: |
           npm ci
           npm run build
-
-  server-node-reference:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: medicore
-          POSTGRES_PASSWORD: medicore_dev
-          POSTGRES_DB: medicore
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U medicore"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: server/package-lock.json
-      - name: M1 reference test suite
-        working-directory: server
-        env:
-          DATABASE_URL: postgres://medicore:medicore_dev@localhost:5432/medicore
-          SESSION_SECRET: ci-only-secret
-        run: |
-          npm ci
-          npm run migrate
-          npm run seed
-          npm test
