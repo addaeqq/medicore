@@ -38,7 +38,9 @@ SUGGESTED 5-MINUTE WALKTHROUGH
 -------------------------------------------------------------------------------
 1. patient@medicore.test    Overview -> My bills -> the GHS 125.00 invoice ->
                             "Pay GHS 125.00" opens the ITC Transflow UAT checkout.
-                            Test card 5123450000000008, CVV 100, expiry any 01-39.
+                            Enter your actual momo number and network.
+                            No funds will be debit.
+                            But your number will be validated via OTP
                             The invoice settles to PAID after the gateway is
                             independently re-checked (never on the callback alone).
 
@@ -80,5 +82,4 @@ NOTES FOR THE EXAMINER
   Railway's edge throttling on the trial plan, not the application — wait a
   moment and retry.
 
-* Source repository access: if the repository is private, request access for the
-  examiner account and it will be granted.
+
