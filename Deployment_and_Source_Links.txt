@@ -1,0 +1,84 @@
+Student Name:   Kelvin Addae Kwarteng
+Student ID:     22427564
+Project Title:  MediCore — Hospital Management System
+
+Live Application:  https://medicore-web-production.up.railway.app
+Admin URL:         https://medicore-web-production.up.railway.app/staff
+                   (sign in as the administrator below, then use the "Staff" tab)
+
+Test Username:     patient@medicore.test
+Test Password:     Password123!
+
+Admin Username:    admin@medicore.test
+Admin Password:    Password123!
+
+Source Code Repository:  https://github.com/addaeqq/medicore
+
+
+-------------------------------------------------------------------------------
+ADDITIONAL ROLE ACCOUNTS (all use the password Password123!)
+-------------------------------------------------------------------------------
+The system is role-based: each account sees only its own screens, so several
+accounts are needed to see the whole application.
+
+  Doctor          doctor@medicore.test      Dr. Abena Mensah — General Medicine
+                                            clinic queue, consultations, prescribing
+  Doctor (A&E)    n.quaye@medicore.test     Dr. Nii Armah Quaye — a patient is
+                                            mid-consultation, triaged ahead of the queue
+  Nurse           c.adjei@medicore.test     Sister Comfort Adjei — Female Medical Ward
+                                            board and observation charting
+  Lab technician  d.ofori@medicore.test     Mr. Daniel Ofori — laboratory bench worklist
+  Pharmacist      pharmacist@medicore.test  Pharm. Kojo Asante — dispensing and stock
+  Receptionist    reception@medicore.test   Mercy Dartey — registration, booking, check-in
+  Billing clerk   billing@medicore.test     Gifty Owusu-Ansah — invoices and payments
+  Management      management@medicore.test  Bright Agyeman — invoice review, void with reason
+
+-------------------------------------------------------------------------------
+SUGGESTED 5-MINUTE WALKTHROUGH
+-------------------------------------------------------------------------------
+1. patient@medicore.test    Overview -> My bills -> the GHS 125.00 invoice ->
+                            "Pay GHS 125.00" opens the ITC Transflow UAT checkout.
+                            Test card 5123450000000008, CVV 100, expiry any 01-39.
+                            The invoice settles to PAID after the gateway is
+                            independently re-checked (never on the callback alone).
+
+2. doctor@medicore.test     "My queue" -> three patients waiting -> "Start
+                            consultation" -> write notes -> "Sign & lock". The note
+                            then cannot be edited: corrections are addendums only,
+                            enforced by a database trigger.
+
+3. c.adjei@medicore.test    "Ward board" -> the occupied bed -> "Open chart" ->
+                            file observations. This nurse can only reach patients
+                            admitted to her own ward (access control AC-03).
+
+4. d.ofori@medicore.test    "Bench worklist" -> open a request -> collect sample ->
+                            start processing -> enter results. The laboratory
+                            cannot release results to the patient; only the
+                            ordering doctor can.
+
+5. pharmacist@medicore.test "Dispensing & stock" -> a prescription -> dispensing
+                            draws the earliest-expiring batch first, and low stock
+                            is flagged in red.
+
+6. admin@medicore.test      "Staff" -> create a staff account, deactivate a leaver,
+                            clear a lockout. "Schedules" -> publish a weekly clinic.
+
+-------------------------------------------------------------------------------
+NOTES FOR THE EXAMINER
+-------------------------------------------------------------------------------
+* All data is synthetic. No real patient data is present anywhere in the system.
+
+* Payments run against the ITC Transflow UAT environment with vendor test
+  instruments. No real money moves.
+
+* The demonstration accounts deliberately share one password so that the whole
+  system can be examined quickly. This is a demonstration setting, not a
+  production one; the seed is disabled and passwords rotated before real use.
+
+* The application is deployed on Railway with two services (web and API) and a
+  managed PostgreSQL instance. If a page briefly returns "rate limited", that is
+  Railway's edge throttling on the trial plan, not the application — wait a
+  moment and retry.
+
+* Source repository access: if the repository is private, request access for the
+  examiner account and it will be granted.
