@@ -87,20 +87,19 @@ New → GitHub Repo → this repo, then in **Settings**:
 | Root Directory | `medicore-backend-server` |
 | Builder | Dockerfile (auto-detected) |
 | Healthcheck Path | `/api/health` |
-| Networking → Generate Domain, target port | `4000` |
+| Networking → Generate Domain, target port | `8080` (see *Ports on Railway* below) |
 
 **Variables** — the `${{Postgres.*}}` forms are Railway reference variables; paste
 them literally and Railway resolves them:
 
 | Variable | Value |
 |---|---|
-| `PORT` | `4000` (matches the domain's target port; `application.yml` reads `${PORT:4000}`) |
 | `DB_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
 | `DB_USER` | `${{Postgres.PGUSER}}` |
 | `DB_PASS` | `${{Postgres.PGPASSWORD}}` |
 | `FLYWAY_LOCATIONS` | `classpath:db/migration,classpath:db/seed` for a demo deploy; **omit for real data** |
 | `COOKIE_SECURE` | `true` (Railway serves HTTPS — NFR-SEC-01) |
-| `COOKIE_SAMESITE` | `lax` (see 3.4) |
+| `COOKIE_SAMESITE` | `lax` (see 3.5) |
 | `CORS_ORIGIN` | the web service's public URL |
 | `ITC_API_KEY`, `ITC_MERCHANT_PRODUCT_ID`, `ITC_TRANSFLOW_ID` | from IT Consortium — see the field mapping below |
 | `ITC_BASE_URL` | omit for the UAT default; `https://apis.itcsrvc.com/checkout` for LIVE |
@@ -115,11 +114,10 @@ New → GitHub Repo → same repo, second service:
 |---|---|
 | Root Directory | `web` |
 | Builder | Dockerfile |
-| Networking → Generate Domain, target port | `3000` |
+| Networking → Generate Domain, target port | `8080` (see *Ports on Railway* below) |
 
 | Variable | Value |
 |---|---|
-| `PORT` | `3000` |
 | `API_URL` | `https://YOUR-API.up.railway.app` |
 
 > **`API_URL` is a build-time value.** Next resolves the `/api/*` rewrite into
@@ -141,7 +139,22 @@ curl https://YOUR-WEB.up.railway.app/api/health    # the proxy hop (500 here = A
 ```
 then log in through the UI.
 
-### 3.4 Why the API's *public* URL, not Railway private networking
+### 3.4 Ports on Railway
+Do **not** set `PORT` yourself. Railway injects it — currently `8080` — and both
+images honour it: `application.yml` reads `${PORT:4000}` and the Next standalone
+server reads `PORT` with `HOSTNAME=0.0.0.0`. Verified by running each image with
+`PORT=8080`: Tomcat reports *"started on port 8080"* and the web server answers
+there.
+
+Both services therefore listen on 8080, which is not a conflict — each runs in
+its own container and network namespace. The only consequence is that each
+generated domain's **target port must be 8080**; a domain pointed at 4000 or 3000
+produces Railway's *"Application failed to respond"*.
+
+The compose stack is unaffected: it pins 4000 and 3000 on the host, and those are
+still the ports in §1.
+
+### 3.5 Why the API's *public* URL, not Railway private networking
 `API_URL` is consumed by `next.config.mjs`'s rewrite, which runs **server-side** in
 the web container. Railway's private network is IPv6-only and Spring Boot binds
 IPv4 by default, so `http://api.railway.internal:4000` would need a
