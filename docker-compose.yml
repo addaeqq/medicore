@@ -1,0 +1,47 @@
+# MediCore HMS — full-stack local demo: `docker compose up --build`
+# Web on :3000, API on :4000, PostgreSQL on :5432.
+# Demo logins (password Password123!): patient/doctor/reception/pharmacist/
+# billing/management/admin @medicore.test — seeded via FLYWAY_LOCATIONS below.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: medicore
+      POSTGRES_PASSWORD: medicore_dev
+      POSTGRES_DB: medicore
+    ports: ["5432:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medicore -d medicore"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./server-java
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/medicore
+      DATABASE_USER: medicore
+      DATABASE_PASSWORD: medicore_dev
+      SESSION_SECRET: local-demo-secret-change-in-production
+      CORS_ORIGIN: http://localhost:3000
+      FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed   # demo data ON
+      # ITC Transflow (UAT) — set real merchant credentials to enable online payment:
+      # ITC_API_KEY: ...
+      # ITC_MERCHANT_PRODUCT_ID: ...
+      # ITC_TRANSFLOW_ID: ...
+      # ITC_CALLBACK_URL must be publicly reachable for callbacks (use the verify
+      # button / endpoint instead when running purely locally).
+    ports: ["4000:4000"]
+
+  web:
+    build: ./web
+    depends_on: [api]
+    environment:
+      API_URL: http://api:4000
+    ports: ["3000:3000"]
+
+volumes:
+  dbdata:

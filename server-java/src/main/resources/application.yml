@@ -21,6 +21,7 @@ spring:
     jdbc:
       initialize-schema: always       # Spring Session tables in the same PostgreSQL
   flyway:
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}   # add ,classpath:db/seed for demo deploys
     enabled: true
 
 medicore:
