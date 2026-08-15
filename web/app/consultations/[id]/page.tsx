@@ -5,11 +5,11 @@ import Link from "next/link";
 import Shell from "@/components/Shell";
 import { useMe } from "@/lib/useMe";
 import { api, ApiError, fmtWhen } from "@/lib/api";
-import { Badge, Button, Card, ErrorNote, Field, PageTitle, PatientBand } from "@/components/ui";
+import { Badge, Button, Card, ErrorNote, Field, Input, PageTitle, PatientBand, Select } from "@/components/ui";
 
 type Consult = {
   consultation_id: string; patient_id: string; complaint: string | null; findings: string | null;
-  diagnosis: string | null; signed_at: string | null; created_at: string; doctor: string;
+  diagnosis: string | null; signed_at: string | null; created_at: string; doctor: string; doctor_id: string;
   patient_name: string; mrn: string; dob: string; sex: string;
   addendums: { addendum_id: string; body: string; created_at: string; author: string }[];
 };
@@ -27,6 +27,12 @@ export default function ConsultationPage() {
   const [addendum, setAddendum] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  type Drug = { drug_id: string; generic_name: string; strength: string; form: string };
+  type RxRow = { drugId: string; dose: string; frequency: string; quantity: string };
+  const emptyRow: RxRow = { drugId: "", dose: "", frequency: "", quantity: "" };
+  const [drugs, setDrugs] = useState<Drug[]>([]);
+  const [rxRows, setRxRows] = useState<RxRow[]>([emptyRow]);
+  const [rxSent, setRxSent] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     api.get<Consult>(`/api/consultations/${id}`).then(d => {
@@ -35,9 +41,16 @@ export default function ConsultationPage() {
     }).catch(e => setError(e instanceof ApiError ? e.message : "Could not load the consultation"));
   }, [id]);
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    if (profile?.user.role === "doctor")
+      api.get<{ drugs: Drug[] }>("/api/inventory/drugs").then(d => setDrugs(d.drugs)).catch(() => null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
 
   if (loading || !profile) return null;
   const isDoctor = profile.user.role === "doctor";
+  const isAuthor = isDoctor && !!c && profile.user.staffId === c.doctor_id;
+  const rxValid = rxRows.some(r => r.drugId && r.dose.trim() && r.frequency.trim() && parseInt(r.quantity, 10) > 0);
   const signed = !!c?.signed_at;
 
   async function save() {
@@ -52,6 +65,19 @@ export default function ConsultationPage() {
     catch (err) { setError(err instanceof ApiError ? err.message : "Sign-off failed"); }
     finally { setBusy(false); }
   }
+  async function sendPrescription() {
+    setBusy(true); setError(null); setRxSent(null);
+    try {
+      const items = rxRows
+        .filter(r => r.drugId && r.dose.trim() && r.frequency.trim() && parseInt(r.quantity, 10) > 0)
+        .map(r => ({ drugId: r.drugId, dose: r.dose.trim(), frequency: r.frequency.trim(), quantity: parseInt(r.quantity, 10) }));
+      await api.post("/api/prescriptions", { consultationId: id, items });
+      setRxRows([emptyRow]);
+      setRxSent(`Prescription sent to pharmacy (${items.length} item${items.length > 1 ? "s" : ""}).`);
+    } catch (err) { setError(err instanceof ApiError ? err.message : "Could not send the prescription"); }
+    finally { setBusy(false); }
+  }
+
   async function addNote() {
     setBusy(true); setError(null);
     try { await api.post(`/api/consultations/${id}/addendums`, { body: addendum }); setAddendum(""); refresh(); }
@@ -92,6 +118,36 @@ export default function ConsultationPage() {
               </>
             ) : <p className="text-sm text-[var(--ink)]/60">This consultation is still being written.</p>}
           </Card>
+          {isAuthor && (
+            <Card className="mb-4">
+              <h2 className="text-xs uppercase tracking-wider text-[var(--ink)]/60 mb-1">Prescription</h2>
+              <p className="text-sm text-[var(--ink)]/60 mb-3">Sent items appear on the pharmacy worklist; batches are drawn earliest-expiry-first at dispensing.</p>
+              {rxSent && <p className="text-sm text-[var(--theatre)] border border-[var(--theatre)]/40 bg-emerald-50/40 rounded-sm px-3 py-2 mb-3">{rxSent}</p>}
+              {rxRows.map((r, i) => (
+                <div key={i} className="grid grid-cols-2 sm:grid-cols-[2fr_1fr_1fr_0.7fr] gap-3 mb-1">
+                  <Field label={i === 0 ? "Drug" : ""}>
+                    <Select value={r.drugId} onChange={e => setRxRows(rows => rows.map((x, j) => j === i ? { ...x, drugId: e.target.value } : x))}>
+                      <option value="">Choose…</option>
+                      {drugs.map(d => <option key={d.drug_id} value={d.drug_id}>{d.generic_name} {d.strength} ({d.form})</option>)}
+                    </Select>
+                  </Field>
+                  <Field label={i === 0 ? "Dose" : ""}>
+                    <Input placeholder="500mg" value={r.dose} onChange={e => setRxRows(rows => rows.map((x, j) => j === i ? { ...x, dose: e.target.value } : x))} />
+                  </Field>
+                  <Field label={i === 0 ? "Frequency" : ""}>
+                    <Input placeholder="3x daily, 5 days" value={r.frequency} onChange={e => setRxRows(rows => rows.map((x, j) => j === i ? { ...x, frequency: e.target.value } : x))} />
+                  </Field>
+                  <Field label={i === 0 ? "Qty" : ""}>
+                    <Input type="number" min={1} value={r.quantity} onChange={e => setRxRows(rows => rows.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} />
+                  </Field>
+                </div>
+              ))}
+              <div className="flex gap-2 mt-1">
+                <Button kind="quiet" onClick={() => setRxRows(rows => [...rows, emptyRow])}>Add another item</Button>
+                <Button onClick={sendPrescription} disabled={busy || !rxValid}>Send to pharmacy</Button>
+              </div>
+            </Card>
+          )}
           {c.addendums.length > 0 && (
             <Card className="mb-4">
               <h2 className="text-xs uppercase tracking-wider text-[var(--ink)]/60 mb-3">Addendums</h2>

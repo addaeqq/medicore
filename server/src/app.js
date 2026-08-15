@@ -39,6 +39,7 @@ app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 50, standardHe
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'medicore-api' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/directory'));
+app.use('/api', require('./routes/clinical_compat'));
 app.use('/api/schedules', require('./routes/schedules'));
 app.use('/api/appointments', require('./routes/appointments'));
 
