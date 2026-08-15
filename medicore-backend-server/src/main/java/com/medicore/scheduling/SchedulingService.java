@@ -127,7 +127,8 @@ public class SchedulingService {
     /** FR-APT-08: live queue for a department ordered by (priority, checked_in_at). */
     public List<Map<String, Object>> departmentQueue(UUID departmentId) {
         return jdbc.queryForList("""
-            SELECT q.queue_entry_id, q.status, q.checked_in_at, q.priority, p.full_name, p.mrn
+            SELECT q.queue_entry_id, q.status, q.checked_in_at, q.priority, p.full_name, p.mrn,
+                   a.appointment_id, a.patient_id
             FROM queue_entries q
             JOIN appointments a ON a.appointment_id = q.appointment_id
             JOIN patients p ON p.patient_id = a.patient_id

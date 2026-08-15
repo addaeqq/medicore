@@ -6,9 +6,8 @@ import { useMe } from "@/lib/useMe";
 import { api, ApiError, fmtWhen } from "@/lib/api";
 import { Badge, Button, Card, Empty, ErrorNote, Field, PageTitle, Select } from "@/components/ui";
 
-type Entry = { queue_entry_id: string; status: string; checked_in_at: string; priority: number; full_name: string; mrn: string };
+type Entry = { queue_entry_id: string; status: string; checked_in_at: string; priority: number; full_name: string; mrn: string; appointment_id: string; patient_id: string };
 type Dept = { department_id: string; name: string };
-type Appt = { appointment_id: string; status: string; starts_at: string };
 
 export default function Queue() {
   const { profile, loading } = useMe();
@@ -40,16 +39,11 @@ export default function Queue() {
   async function startConsultation(entry: Entry) {
     setError(null); setStarting(entry.queue_entry_id);
     try {
-      // The queue row doesn't carry the appointment id; resolve it via the patient's list.
-      const found = await api.get<{ patients: { patient_id: string }[] }>(
-        `/api/patients/search?q=${encodeURIComponent(entry.mrn)}`).catch(() => null);
-      let appointmentId: string | null = null;
-      if (found && found.patients[0]) {
-        const appts = await api.get<{ appointments: Appt[] }>(`/api/appointments/patient/${found.patients[0].patient_id}`);
-        appointmentId = appts.appointments.find(a => a.status === "checked_in")?.appointment_id ?? null;
-      }
-      if (!appointmentId) throw new ApiError(404, "Could not resolve the checked-in appointment");
-      const out = await api.post<{ consultationId: string }>("/api/consultations/start", { appointmentId });
+      // FR-APT-08 carries the appointment id on the queue row, so the consultation starts
+      // directly. Resolving it client-side via /patients/search was denied for doctors
+      // (patient.read_profile is RELATIONSHIP-scoped, TD-10).
+      const out = await api.post<{ consultationId: string }>("/api/consultations/start",
+        { appointmentId: entry.appointment_id });
       router.push(`/consultations/${out.consultationId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not start the consultation");
