@@ -1,0 +1,20 @@
+@startuml wire_queue
+skinparam dpi 140
+title Wireframe - Reception Live Queue Dashboard
+salt
+{
+  {* MediCore | Queue | Register Patient | Check-in | <b>Reception</b> }
+  ..
+  { Department: ^General Medicine^ | Doctor: ^All^ | [ + Add walk-in ] }
+  ..
+  {#
+    . | <b>Pos</b> | <b>Patient</b> | <b>Time</b> | <b>Status</b> | <b>Action</b>
+    . | 1 | Ama O. (MRN-0412) | 09:00 | In consultation | [Complete]
+    . | 2 | Kofi B. (MRN-0388) | 09:20 | Waiting | [Call in]
+    . | 3 | Esi M. (walk-in) | -- | Waiting | [Reorder]
+    . | 4 | Yaw D. (MRN-0455) | 09:40 | Waiting | [Reorder]
+  }
+  ..
+  { Waiting: <b>3</b> | Avg wait: <b>18 min</b> | No-shows today: <b>2</b> }
+}
+@enduml

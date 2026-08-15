@@ -21,9 +21,18 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/dashboard", label: "Overview" },
     { href: "/queue", label: "My queue" },
   ],
+  nurse: [
+    { href: "/dashboard", label: "Overview" },
+    { href: "/ward", label: "Ward board" },
+    { href: "/queue", label: "Queue" },
+  ],
   pharmacist: [
     { href: "/dashboard", label: "Overview" },
     { href: "/pharmacy", label: "Dispensing & stock" },
+  ],
+  lab_tech: [
+    { href: "/dashboard", label: "Overview" },
+    { href: "/lab", label: "Bench worklist" },
   ],
   billing_clerk: [
     { href: "/dashboard", label: "Overview" },

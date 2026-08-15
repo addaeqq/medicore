@@ -1,0 +1,11 @@
+# Keep the build context to sources + Gradle config. The Dockerfile does `COPY . .`,
+# so without this the local Gradle cache and IDE state end up inside the image and
+# invalidate the build layer on every unrelated edit.
+.gradle/
+build/
+.idea/
+*.iml
+.DS_Store
+.git/
+.gitignore
+README.md

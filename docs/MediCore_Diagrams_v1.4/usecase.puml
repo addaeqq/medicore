@@ -1,0 +1,89 @@
+@startuml usecase
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+left to right direction
+skinparam usecaseBackgroundColor #F4F7FC
+skinparam usecaseBorderColor #2E5395
+
+actor Patient as pat
+actor Receptionist as rec
+actor Doctor as doc
+actor Nurse as nur
+actor Pharmacist as phm
+actor "Lab Technician" as lab
+actor "Billing Clerk" as bil
+actor Management as mgt
+actor "System Admin" as adm
+actor "Family Grantee" as fam
+actor "Paystack" as pay <<external>>
+actor "Email Service" as mail <<external>>
+
+rectangle "MediCore HMS" {
+  package "Appointments & Queue" {
+    usecase "Book / cancel /\nreschedule appointment" as UC_book
+    usecase "Check in & manage\nlive queue" as UC_queue
+    usecase "Define schedules &\ngenerate slots" as UC_sched
+  }
+  package "Clinical (EMR)" {
+    usecase "Conduct consultation\n(diagnosis, sign-off)" as UC_cons
+    usecase "Record vitals &\nallergies" as UC_vit
+    usecase "Write prescription" as UC_rx
+    usecase "Order lab tests" as UC_ord
+    usecase "Review & release\nresults" as UC_rel
+  }
+  package "Pharmacy" {
+    usecase "Dispense prescription\n(FEFO, allergy check)" as UC_disp
+    usecase "Manage drug stock\n& alerts" as UC_stock
+  }
+  package "Laboratory" {
+    usecase "Process order &\nenter results" as UC_labp
+  }
+  package "Billing" {
+    usecase "Maintain consolidated\ninvoice" as UC_inv
+    usecase "Pay online" as UC_pay
+    usecase "Record offline payment /\nvoid with reason" as UC_off
+  }
+  package "Facility" {
+    usecase "Admit & assign bed" as UC_admit
+    usecase "Transfer / discharge" as UC_dis
+    usecase "Monitor occupancy" as UC_occ
+  }
+  package "Access & Admin" {
+    usecase "Register (self /\nwalk-in)" as UC_reg
+    usecase "Grant / revoke\nfamily access" as UC_grant
+    usecase "View granted info" as UC_fam
+    usecase "Manage users, roles,\ndepartments" as UC_users
+    usecase "View dashboards &\naudit log" as UC_dash
+  }
+}
+
+pat --> UC_reg
+pat --> UC_book
+pat --> UC_pay
+pat --> UC_grant
+rec --> UC_reg
+rec --> UC_queue
+doc --> UC_cons
+doc --> UC_rx
+doc --> UC_ord
+doc --> UC_rel
+doc --> UC_admit
+doc --> UC_dis
+nur --> UC_vit
+nur --> UC_occ
+phm --> UC_disp
+phm --> UC_stock
+lab --> UC_labp
+bil --> UC_inv
+bil --> UC_off
+mgt --> UC_dash
+adm --> UC_users
+adm --> UC_sched
+fam --> UC_fam
+UC_pay --> pay
+UC_book ..> mail : <<include>>\nconfirmation
+UC_disp ..> UC_inv : <<include>>\npost charges
+UC_ord ..> UC_inv : <<include>>
+UC_admit ..> UC_inv : <<include>>\nbed-day accrual
+@enduml

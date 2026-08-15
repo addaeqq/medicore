@@ -1,0 +1,48 @@
+@startuml seq_pay
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Sequence - Online Payment via ITC Transflow Checkout (FR-BIL-03, NFR-SEC-06, DD-07)
+
+actor Patient as pat
+participant "React SPA" as spa
+participant "REST Controllers" as api
+participant "Billing Service" as bil
+participant "ItcGatewayAdapter\n(PaymentGateway port)" as gw
+database PostgreSQL as db
+participant "ITC Transflow\nCheckout" as itc
+
+pat -> spa : Pay invoice
+spa -> api : POST /payments/init {invoiceId}
+api -> bil : initOnlinePayment(invoice, payer)
+bil -> db : INSERT payment (status='pending',\namount = outstanding balance)
+bil -> gw : requestPayment(amount, reference,\nname, email)
+gw -> itc : POST /request-payments\n{fullName, email, amount, currency,\nredirect URLs, callbackUrl,\napiKey, merchantProductId, transflowId}
+itc --> gw : 200 {data.transactionReference,\ndata.checkoutUrl}
+gw --> bil : instruction
+bil -> db : store gateway_ref = transactionReference
+bil --> spa : {paymentId, redirectUrl}
+spa -> itc : patient completes payment\non hosted checkout page
+itc -> api : POST /api/payments/callback\n{refNo, amount, responseCode, ...}
+note right of api
+  Body untrusted; ALWAYS answer HTTP 200
+  (vendor requirement). Never credits by itself.
+end note
+api -> bil : handleCallback(refNo)
+bil -> gw : verifyStatus(transactionReference)
+gw -> itc : POST /check-transaction-status\n{transactionReference, apiKey, ...}
+itc --> gw : 200 {data.responseCode,\ndata.amount}
+gw --> bil : VerificationResult
+alt outer 200 AND data.responseCode='01' AND amount matches exactly
+  bil -> db : payment 'paid'; invoice status recomputed
+  bil --> api : status=paid
+else anything else (fail closed)
+  bil -> db : payment 'failed' (or stays pending\non transport error); audit log
+  bil --> api : status=failed / pending
+end
+api --> itc : HTTP 200 {received:true}
+note over spa, bil
+  Missed callback (spec sec.3): POST /payments/{id}/verify
+  re-runs the same verifyStatus round-trip.
+end note
+@enduml

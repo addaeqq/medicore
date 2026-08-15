@@ -13,10 +13,16 @@ type Emr = {
   prescriptions: { prescription_id: string; status: string; created_at: string; generic_name: string; dose: string; frequency: string; quantity: number }[];
 };
 
+type LabOrder = {
+  lab_order_id: string; status: string; created_at: string; ordered_by: string;
+  items: { name: string; specimen: string; result_value: string | null; ref_range: string | null; released_at: string | null }[];
+};
+
 export default function EmrPage() {
   const { profile, loading } = useMe();
   const { id } = useParams<{ id: string }>();
   const [emr, setEmr] = useState<Emr | null>(null);
+  const [labs, setLabs] = useState<LabOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [allergy, setAllergy] = useState({ substance: "", severity: "moderate" });
 
@@ -25,8 +31,16 @@ export default function EmrPage() {
       .catch(e => setError(e instanceof ApiError && e.status === 403
         ? "You don't have access to this record. Access follows the active-care rule."
         : "Could not load the record"));
+    // Laboratory sits behind its own action: a patient sees released values only (AC-04).
+    api.get<{ orders: LabOrder[] }>(`/api/lab/patients/${id}/orders`)
+      .then(d => setLabs(d.orders)).catch(() => setLabs([]));
   }, [id]);
   useEffect(() => { refresh(); }, [refresh]);
+
+  async function release(orderId: string) {
+    try { await api.post(`/api/lab/orders/${orderId}/release`); refresh(); }
+    catch (err) { setError(err instanceof ApiError ? err.message : "Could not release the results"); }
+  }
 
   if (loading || !profile) return null;
   const isDoctor = profile.user.role === "doctor";
@@ -85,6 +99,36 @@ export default function EmrPage() {
                 </>
               )}
             </Card>
+            <h2 className="text-xs uppercase tracking-wider text-[var(--ink)]/60">Laboratory</h2>
+            <Card>
+              {labs.length === 0 && <p className="text-sm text-[var(--ink)]/60">No laboratory requests.</p>}
+              <ul className="space-y-3">
+                {labs.map(o => (
+                  <li key={o.lab_order_id} className="text-sm">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs text-[var(--ink)]/50">{fmtWhen(o.created_at)}</span>
+                      <span className="ml-auto"><Badge status={o.status} /></span>
+                    </div>
+                    <ul className="mt-1 space-y-0.5">
+                      {o.items.map((t, i) => (
+                        <li key={`${o.lab_order_id}-${i}`} className="flex items-baseline gap-2">
+                          <span>{t.name}</span>
+                          <span className="ml-auto font-chart text-xs">
+                            {t.result_value ?? (o.status === "released" ? "—" : "pending")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {isDoctor && o.status === "result_entered" && (
+                      <div className="mt-2">
+                        <Button kind="quiet" onClick={() => release(o.lab_order_id)}>Release to patient</Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
             <h2 className="text-xs uppercase tracking-wider text-[var(--ink)]/60">Prescriptions</h2>
             <Card>
               {emr.prescriptions.length === 0 && <p className="text-sm text-[var(--ink)]/60">None yet.</p>}

@@ -1,0 +1,62 @@
+@startuml architecture
+skinparam dpi 140
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName Helvetica
+skinparam rectangleBackgroundColor #F4F7FC
+skinparam rectangleBorderColor #2E5395
+skinparam databaseBackgroundColor #FFF7E6
+skinparam cloudBackgroundColor #F0FFF4
+
+actor "Users\n(9 staff & patient roles)" as users
+
+node "Front end - Vercel" as fe {
+  [React / Next.js SPA\nrole-specific consoles] as spa
+}
+
+node "Back end API - Render (Docker, Java 21)" as be {
+  [REST Controllers\nSpring Web + Bean Validation] as routes
+  [Security Filter Chain\nSpring Security - Spring Session JDBC\nrate limiting (Bucket4j)] as auth
+  [Policy Engine\ncustom AuthorizationManager\nRBAC + ReBAC - deny by default (AC-06)] as policy
+  package "Domain Services (@Transactional)" {
+    [Scheduling &\nQueue] as svc_sched
+    [Clinical /\nEMR] as svc_emr
+    [Pharmacy] as svc_phm
+    [Laboratory] as svc_lab
+    [Billing] as svc_bil
+    [Facility /\nBeds] as svc_fac
+    [Notification] as svc_ntf
+  }
+  [Audit Logger\n(append-only)] as audit
+  [Persistence Layer\nSpring Data JPA (Hibernate)\nFlyway versioned migrations] as dal
+}
+
+database "PostgreSQL\n(managed - daily backups -\nalso session store)" as db
+cloud "ITC Payments API\n(test mode)" as pay
+cloud "Email Provider\n(transactional)" as mail
+
+users --> spa : HTTPS
+spa --> routes : JSON/HTTPS
+routes --> auth
+auth --> policy
+policy --> svc_sched
+policy --> svc_emr
+policy --> svc_phm
+policy --> svc_lab
+policy --> svc_bil
+policy --> svc_fac
+policy ..> audit : logs every\nclinical access
+svc_sched --> dal
+svc_emr --> dal
+svc_phm --> dal
+svc_lab --> dal
+svc_bil --> dal
+svc_fac --> dal
+audit --> dal
+dal --> db
+svc_bil --> pay : initialise +\nserver-side verify
+pay ..> routes : webhook
+svc_ntf --> mail
+svc_sched ..> svc_ntf
+svc_bil ..> svc_ntf
+@enduml

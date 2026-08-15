@@ -1,0 +1,39 @@
+@startuml seq_dispense
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Sequence - Dispense Prescription (FR-PHM-04/05, FEFO + charge posting)
+
+actor Pharmacist as ph
+participant "React SPA" as spa
+participant "API Routes" as api
+participant "Policy Engine" as pol
+participant "Pharmacy Service" as svc
+participant "Billing Service" as bil
+database PostgreSQL as db
+
+ph -> spa : open dispensing queue,\nselect prescription
+spa -> api : GET /prescriptions/{id}
+api -> pol : authorise(pharmacist, read_rx)
+pol -> svc : getWithAllergies(id)
+svc -> db : SELECT rx items + patient allergies
+db --> spa : items + allergy flags
+alt drug matches recorded allergy
+  spa --> ph : WARNING banner - requires\nexplicit override + reason
+end
+ph -> spa : confirm dispense
+spa -> api : POST /dispense {rx_item_ids}
+api -> pol : authorise(pharmacist, dispense)
+pol -> svc : dispense(items)
+svc -> db : BEGIN
+loop each prescription item
+  svc -> db : SELECT batches WHERE drug_id\nORDER BY expiry_date ASC\nFOR UPDATE  (FEFO)
+  svc -> db : UPDATE batch qty_on_hand -= n
+  svc -> db : INSERT dispense record
+end
+svc -> bil : postCharges(items)
+bil -> db : INSERT invoice_items
+svc -> db : COMMIT
+svc --> spa : 200 dispensed + invoice updated
+spa --> ph : stock decremented,\ncharges posted
+@enduml

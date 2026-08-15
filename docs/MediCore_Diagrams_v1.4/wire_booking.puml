@@ -1,0 +1,24 @@
+@startuml wire_booking
+skinparam dpi 140
+title Wireframe - Patient Booking Page
+salt
+{
+  {* MediCore | Appointments | My Records | My Bills | <b>Kwame A.</b> }
+  ..
+  {
+    { Department: | ^General Medicine^ } | { Doctor: | ^Dr. Mensah^ }
+    { Date: | "2026-09-14" | [Find slots] }
+  }
+  ..
+  { <b>Available slots - Mon 14 Sep</b> }
+  {
+    [09:00] | [09:20] | [09:40] | [10:00]
+    [10:20] | [ 10:40 (taken) ] | [11:00] | [11:20]
+  }
+  ..
+  { Selected: <b>09:40 - Dr. Mensah - GHS 80</b> }
+  { [    Confirm booking    ] | [ Cancel ] }
+  ..
+  { <i>You will receive an email confirmation and a reminder 24h before.</i> }
+}
+@enduml

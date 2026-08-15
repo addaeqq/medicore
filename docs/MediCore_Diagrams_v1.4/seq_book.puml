@@ -1,0 +1,41 @@
+@startuml seq_book
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Sequence - Book Appointment (FR-APT-03/04, double-booking guard)
+
+actor Patient as pat
+participant "React SPA" as spa
+participant "API Routes" as api
+participant "Policy Engine" as pol
+participant "Scheduling Service" as svc
+database PostgreSQL as db
+participant "Notification Svc" as ntf
+participant "Email Provider" as mail
+
+pat -> spa : select doctor, date
+spa -> api : GET /slots?doctor&date
+api -> pol : authorise(patient, list_slots)
+pol -> svc : listAvailable()
+svc -> db : SELECT slots WHERE status='available'
+db --> spa : available slots
+pat -> spa : choose slot, confirm
+spa -> api : POST /appointments {slot_id}
+api -> pol : authorise(patient, book)
+pol -> svc : book(patient, slot)
+svc -> db : BEGIN
+svc -> db : INSERT appointment\n(unique index on slot_id)
+alt slot still free
+  svc -> db : UPDATE slot SET status='booked'
+  svc -> db : COMMIT
+  svc -> ntf : enqueue confirmation
+  ntf -> mail : send email
+  svc --> spa : 201 Created (appointment)
+  spa --> pat : booking confirmed
+else unique violation (already taken)
+  db --> svc : constraint error
+  svc -> db : ROLLBACK
+  svc --> spa : 409 Conflict
+  spa --> pat : slot taken - pick another
+end
+@enduml

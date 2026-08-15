@@ -18,8 +18,15 @@ const CARDS: Record<string, { href: string; title: string; body: string }[]> = {
   doctor: [
     { href: "/queue", title: "My clinic queue", body: "Checked-in patients; start a consultation." },
   ],
+  nurse: [
+    { href: "/ward", title: "Ward board", body: "Your ward's beds, who is in them, and the observation chart." },
+    { href: "/queue", title: "Department queue", body: "Who is waiting, in order." },
+  ],
   pharmacist: [
     { href: "/pharmacy", title: "Dispensing worklist", body: "Open prescriptions; FEFO picks the batch for you." },
+  ],
+  lab_tech: [
+    { href: "/lab", title: "Bench worklist", body: "Collect samples, process requests and enter results." },
   ],
   billing_clerk: [
     { href: "/billing", title: "Billing workspace", body: "Invoices, charges from consults and pharmacy, payments." },

@@ -1,0 +1,142 @@
+@startuml er2
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam linetype ortho
+hide circle
+title ER Domain 2 - Clinical, Pharmacy & Laboratory
+
+entity PATIENT {
+  *patient_id : uuid <<PK>>
+}
+entity STAFF {
+  *staff_id : uuid <<PK>>
+}
+entity CONSULTATION {
+  *consultation_id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK, nullable>>
+  admission_id : uuid <<FK, nullable>>
+  doctor_id : uuid <<FK>>
+  patient_id : uuid <<FK>>
+  complaint : text
+  findings : text
+  diagnosis : text
+  signed_at : timestamptz
+}
+entity ADDENDUM {
+  *addendum_id : uuid <<PK>>
+  --
+  consultation_id : uuid <<FK>>
+  author_id : uuid <<FK>>
+  body : text
+  created_at : timestamptz
+}
+entity VITALS {
+  *vitals_id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  recorded_by : uuid <<FK>>
+  bp_sys : smallint
+  bp_dia : smallint
+  temp_c : numeric
+  pulse : smallint
+  spo2 : smallint
+  recorded_at : timestamptz
+}
+entity ALLERGY {
+  *allergy_id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  substance : varchar
+  severity : enum
+}
+entity PRESCRIPTION {
+  *prescription_id : uuid <<PK>>
+  --
+  consultation_id : uuid <<FK>>
+  doctor_id : uuid <<FK>>
+  patient_id : uuid <<FK>>
+  status : enum
+}
+entity PRESCRIPTION_ITEM {
+  *rx_item_id : uuid <<PK>>
+  --
+  prescription_id : uuid <<FK>>
+  drug_id : uuid <<FK>>
+  dose : varchar
+  frequency : varchar
+  duration_days : smallint
+  quantity : int
+}
+entity DRUG {
+  *drug_id : uuid <<PK>>
+  --
+  generic_name : varchar
+  brand_name : varchar
+  form : enum
+  strength : varchar
+  unit_price : numeric
+  reorder_level : int
+  is_controlled : boolean
+}
+entity STOCK_BATCH {
+  *batch_id : uuid <<PK>>
+  --
+  drug_id : uuid <<FK>>
+  batch_no : varchar
+  expiry_date : date
+  qty_on_hand : int
+  unit_cost : numeric
+}
+entity DISPENSE {
+  *dispense_id : uuid <<PK>>
+  --
+  rx_item_id : uuid <<FK>>
+  batch_id : uuid <<FK>>
+  qty : int
+  dispensed_by : uuid <<FK>>
+  dispensed_at : timestamptz
+}
+entity LAB_TEST {
+  *lab_test_id : uuid <<PK>>
+  --
+  name : varchar
+  specimen : enum
+  price : numeric
+  tat_hours : smallint
+}
+entity LAB_ORDER {
+  *lab_order_id : uuid <<PK>>
+  --
+  consultation_id : uuid <<FK>>
+  patient_id : uuid <<FK>>
+  ordered_by : uuid <<FK>>
+  status : enum
+}
+entity LAB_ORDER_ITEM {
+  *order_item_id : uuid <<PK>>
+  --
+  lab_order_id : uuid <<FK>>
+  lab_test_id : uuid <<FK>>
+  result_value : varchar
+  ref_range : varchar
+  entered_by : uuid <<FK>>
+  released_at : timestamptz
+}
+
+PATIENT ||--o{ CONSULTATION
+STAFF ||--o{ CONSULTATION
+CONSULTATION ||--o{ ADDENDUM
+PATIENT ||--o{ VITALS
+PATIENT ||--o{ ALLERGY
+CONSULTATION ||--o{ PRESCRIPTION
+PRESCRIPTION ||--|{ PRESCRIPTION_ITEM
+DRUG ||--o{ PRESCRIPTION_ITEM
+DRUG ||--o{ STOCK_BATCH
+PRESCRIPTION_ITEM ||--o{ DISPENSE
+STOCK_BATCH ||--o{ DISPENSE
+CONSULTATION ||--o{ LAB_ORDER
+LAB_ORDER ||--|{ LAB_ORDER_ITEM
+LAB_TEST ||--o{ LAB_ORDER_ITEM
+@enduml

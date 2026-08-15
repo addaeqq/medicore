@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Shell from "@/components/Shell";
 import { useMe } from "@/lib/useMe";
-import { api, ApiError, fmtWhen } from "@/lib/api";
+import { api, ApiError, fmtMoney, fmtWhen } from "@/lib/api";
 import { Badge, Button, Card, ErrorNote, Field, Input, PageTitle, PatientBand, Select } from "@/components/ui";
 
 type Consult = {
@@ -33,6 +33,10 @@ export default function ConsultationPage() {
   const [drugs, setDrugs] = useState<Drug[]>([]);
   const [rxRows, setRxRows] = useState<RxRow[]>([emptyRow]);
   const [rxSent, setRxSent] = useState<string | null>(null);
+  type LabTest = { lab_test_id: string; name: string; specimen: string; price: number; tat_hours: number | null };
+  const [labTests, setLabTests] = useState<LabTest[]>([]);
+  const [labPicked, setLabPicked] = useState<string[]>([]);
+  const [labSent, setLabSent] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     api.get<Consult>(`/api/consultations/${id}`).then(d => {
@@ -42,8 +46,10 @@ export default function ConsultationPage() {
   }, [id]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
-    if (profile?.user.role === "doctor")
+    if (profile?.user.role === "doctor") {
       api.get<{ drugs: Drug[] }>("/api/inventory/drugs").then(d => setDrugs(d.drugs)).catch(() => null);
+      api.get<{ tests: LabTest[] }>("/api/lab/tests").then(d => setLabTests(d.tests)).catch(() => null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
@@ -75,6 +81,16 @@ export default function ConsultationPage() {
       setRxRows([emptyRow]);
       setRxSent(`Prescription sent to pharmacy (${items.length} item${items.length > 1 ? "s" : ""}).`);
     } catch (err) { setError(err instanceof ApiError ? err.message : "Could not send the prescription"); }
+    finally { setBusy(false); }
+  }
+
+  async function sendLabRequest() {
+    setBusy(true); setError(null); setLabSent(null);
+    try {
+      await api.post("/api/lab/orders", { consultationId: id, testIds: labPicked });
+      setLabSent(`Request sent to the laboratory (${labPicked.length} test${labPicked.length > 1 ? "s" : ""}).`);
+      setLabPicked([]);
+    } catch (err) { setError(err instanceof ApiError ? err.message : "Could not send the laboratory request"); }
     finally { setBusy(false); }
   }
 
@@ -146,6 +162,29 @@ export default function ConsultationPage() {
                 <Button kind="quiet" onClick={() => setRxRows(rows => [...rows, emptyRow])}>Add another item</Button>
                 <Button onClick={sendPrescription} disabled={busy || !rxValid}>Send to pharmacy</Button>
               </div>
+            </Card>
+          )}
+          {isAuthor && (
+            <Card className="mb-4">
+              <h2 className="text-xs uppercase tracking-wider text-[var(--ink)]/60 mb-1">Laboratory request</h2>
+              <p className="text-sm text-[var(--ink)]/60 mb-3">
+                Requested tests appear on the laboratory bench. Results come back to you to release —
+                the patient sees nothing until you do.
+              </p>
+              {labSent && <p className="text-sm text-[var(--theatre)] border border-[var(--theatre)]/40 bg-emerald-50/40 rounded-sm px-3 py-2 mb-3">{labSent}</p>}
+              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 mb-3">
+                {labTests.map(t => (
+                  <label key={t.lab_test_id} className="flex items-baseline gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={labPicked.includes(t.lab_test_id)}
+                      onChange={e => setLabPicked(p => e.target.checked ? [...p, t.lab_test_id] : p.filter(x => x !== t.lab_test_id))} />
+                    <span>{t.name}</span>
+                    <span className="ml-auto font-chart text-xs text-[var(--ink)]/50">{fmtMoney(t.price)}</span>
+                  </label>
+                ))}
+              </div>
+              <Button onClick={sendLabRequest} disabled={busy || labPicked.length === 0}>
+                Send request to laboratory
+              </Button>
             </Card>
           )}
           {c.addendums.length > 0 && (

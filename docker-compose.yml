@@ -1,47 +1,81 @@
 # MediCore HMS — full-stack local demo: `docker compose up --build`
-# Web on :3000, API on :4000, PostgreSQL on :5432.
+# Web on :3000, API on :4000, PostgreSQL on :5433 (host).
 # Demo logins (password Password123!): patient/doctor/reception/pharmacist/
-# billing/management/admin @medicore.test — seeded via FLYWAY_LOCATIONS below.
+# billing/management/admin @medicore.test — seeded via FLYWAY_LOCATIONS below,
+# along with a full hospital: 26 staff, 20 patients, a live queue, four weeks of
+# clinic history and four weeks of bookable slots. See DEPLOYMENT.md §1.
+# Editing the seed? Rebuild the API image (`docker compose build api`) — the SQL
+# is packaged into the jar, so a restart alone keeps serving the old data.
+#
+# Every value below can be overridden from a local `.env` (see .env.example);
+# the defaults here are the demo settings, so plain `docker compose up` works.
+# `server/` (the frozen Node M1 reference) is deliberately not part of this stack —
+# it shares table names with the Flyway schema and is run only via its test suite.
 services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: medicore
-      POSTGRES_PASSWORD: medicore_dev
-      POSTGRES_DB: medicore
-    ports: ["5432:5432"]
+      POSTGRES_USER: ${DB_USER:-medicore}
+      POSTGRES_PASSWORD: ${DB_PASS:-medicore_dev}
+      POSTGRES_DB: ${DB_NAME:-medicore}
+    ports: ["${DB_HOST_PORT:-5433}:5432"]   # host 5433 avoids clashing with a locally installed PostgreSQL
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medicore -d medicore"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-medicore} -d ${DB_NAME:-medicore}"]
       interval: 3s
       timeout: 3s
       retries: 20
 
   api:
-    build: ./server-java
+    build: ./medicore-backend-server
     depends_on:
       db: { condition: service_healthy }
     environment:
-      DATABASE_URL: jdbc:postgresql://db:5432/medicore
-      DATABASE_USER: medicore
-      DATABASE_PASSWORD: medicore_dev
-      SESSION_SECRET: local-demo-secret-change-in-production
-      CORS_ORIGIN: http://localhost:3000
-      FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed   # demo data ON
-      # ITC Transflow (UAT) — set real merchant credentials to enable online payment:
-      # ITC_API_KEY: ...
-      # ITC_MERCHANT_PRODUCT_ID: ...
-      # ITC_TRANSFLOW_ID: ...
-      # ITC_CALLBACK_URL must be publicly reachable for callbacks (use the verify
-      # button / endpoint instead when running purely locally).
-    ports: ["4000:4000"]
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-medicore}
+      DB_USER: ${DB_USER:-medicore}
+      DB_PASS: ${DB_PASS:-medicore_dev}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/seed}   # demo data ON
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}     # true once served over HTTPS (NFR-SEC-01)
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}   # lax works because web proxies /api (DD-02)
+      # ITC Transflow (UAT) — set real merchant credentials to enable online payment.
+      # ITC_CALLBACK_URL must be publicly reachable; locally, use the verify button
+      # (POST /api/payments/{id}/verify) instead of waiting for a callback.
+      ITC_BASE_URL: ${ITC_BASE_URL:-https://apisuat.itcsrvc.com/checkout}
+      ITC_API_KEY: ${ITC_API_KEY:-}
+      ITC_MERCHANT_PRODUCT_ID: ${ITC_MERCHANT_PRODUCT_ID:-}
+      ITC_TRANSFLOW_ID: ${ITC_TRANSFLOW_ID:-}
+      ITC_CALLBACK_URL: ${ITC_CALLBACK_URL:-http://localhost:4000/api/payments/callback}
+      ITC_SUCCESS_URL: ${ITC_SUCCESS_URL:-http://localhost:3000/payments/success}
+      ITC_FAILURE_URL: ${ITC_FAILURE_URL:-http://localhost:3000/payments/failure}
+      # SMTP is optional (DD-08): unset means outbox rows are marked 'skipped',
+      # never blocking a business flow.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    ports: ["${API_HOST_PORT:-4000}:4000"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s          # first boot also runs Flyway V1..V5 + the seed
 
   web:
-    build: ./web
-    depends_on: [api]
+    build:
+      context: ./web
+      args:
+        # Next bakes the /api/* rewrite destination in at build time, so this must
+        # be a build arg — a runtime-only value is ignored. Rebuild (not just
+        # restart) after changing it: `docker compose up --build web`.
+        API_URL: http://api:4000
+    depends_on:
+      api: { condition: service_healthy }   # otherwise the first page load races the migration
     environment:
-      API_URL: http://api:4000
-    ports: ["3000:3000"]
+      API_URL: http://api:4000              # kept in sync for any runtime reader
+    ports: ["${WEB_HOST_PORT:-3000}:3000"]
 
 volumes:
   dbdata:

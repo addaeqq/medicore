@@ -1,0 +1,89 @@
+@startuml er3
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam linetype ortho
+hide circle
+title ER Domain 3 - Billing, Payments & Facility
+
+entity PATIENT {
+  *patient_id : uuid <<PK>>
+}
+entity INVOICE {
+  *invoice_id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  visit_ref : varchar
+  status : enum
+  issued_at : timestamptz
+}
+entity INVOICE_ITEM {
+  *item_id : uuid <<PK>>
+  --
+  invoice_id : uuid <<FK>>
+  source_type : enum
+  source_id : uuid
+  description : varchar
+  amount : numeric
+  posted_at : timestamptz
+}
+entity PAYMENT {
+  *payment_id : uuid <<PK>>
+  --
+  invoice_id : uuid <<FK>>
+  method : enum
+  amount : numeric
+  paystack_ref : varchar <<nullable>>
+  status : enum
+  paid_at : timestamptz
+}
+entity WARD {
+  *ward_id : uuid <<PK>>
+  --
+  name : varchar
+  daily_tariff : numeric
+}
+entity ROOM {
+  *room_id : uuid <<PK>>
+  --
+  ward_id : uuid <<FK>>
+  room_no : varchar
+}
+entity BED {
+  *bed_id : uuid <<PK>>
+  --
+  room_id : uuid <<FK>>
+  label : varchar
+  status : enum
+}
+entity ADMISSION {
+  *admission_id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  admitting_doctor : uuid <<FK>>
+  bed_id : uuid <<FK>>
+  invoice_id : uuid <<FK>>
+  admitted_at : timestamptz
+  discharged_at : timestamptz
+  status : enum
+}
+entity BED_ASSIGNMENT {
+  *assignment_id : uuid <<PK>>
+  --
+  admission_id : uuid <<FK>>
+  bed_id : uuid <<FK>>
+  from_ts : timestamptz
+  to_ts : timestamptz
+}
+
+PATIENT ||--o{ INVOICE
+INVOICE ||--|{ INVOICE_ITEM
+INVOICE ||--o{ PAYMENT
+WARD ||--|{ ROOM
+ROOM ||--|{ BED
+PATIENT ||--o{ ADMISSION
+BED ||--o{ ADMISSION
+INVOICE |o--o{ ADMISSION
+ADMISSION ||--|{ BED_ASSIGNMENT
+BED ||--o{ BED_ASSIGNMENT
+@enduml

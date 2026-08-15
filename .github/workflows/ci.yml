@@ -11,7 +11,7 @@ on:
   pull_request:
 
 jobs:
-  server-java:
+  medicore-backend-server:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -34,7 +34,7 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - name: Unit + integration tests (Testcontainers-free; uses the service DB)
-        working-directory: server-java
+        working-directory: medicore-backend-server
         env:
           MEDICORE_IT: 'true'
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medicore_java
@@ -45,8 +45,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: server-java-test-report
-          path: server-java/build/reports/tests/test
+          name: medicore-backend-server-test-report
+          path: medicore-backend-server/build/reports/tests/test
 
   web:
     runs-on: ubuntu-latest

@@ -1,0 +1,110 @@
+@startuml er1
+skinparam dpi 140
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam linetype ortho
+hide circle
+title ER Domain 1 - Identity, Scheduling, Appointments & Access
+
+entity USER {
+  *user_id : uuid <<PK>>
+  --
+  email : varchar <<unique>>
+  password_hash : varchar
+  role : enum
+  is_active : boolean
+}
+entity PATIENT {
+  *patient_id : uuid <<PK>>
+  --
+  user_id : uuid <<FK, nullable>>
+  mrn : varchar <<unique>>
+  full_name : varchar
+  dob : date
+  sex : enum
+  phone : varchar
+  next_of_kin : varchar
+}
+entity STAFF {
+  *staff_id : uuid <<PK>>
+  --
+  user_id : uuid <<FK>>
+  department_id : uuid <<FK>>
+  staff_type : enum
+  full_name : varchar
+}
+entity DEPARTMENT {
+  *department_id : uuid <<PK>>
+  --
+  name : varchar
+  dept_type : enum
+  consult_fee : numeric
+}
+entity SCHEDULE {
+  *schedule_id : uuid <<PK>>
+  --
+  doctor_id : uuid <<FK STAFF>>
+  weekday : smallint
+  start_time : time
+  end_time : time
+  slot_minutes : smallint
+  room : varchar
+}
+entity SLOT {
+  *slot_id : uuid <<PK>>
+  --
+  schedule_id : uuid <<FK>>
+  doctor_id : uuid <<FK>>
+  starts_at : timestamptz
+  ends_at : timestamptz
+  status : enum
+}
+entity APPOINTMENT {
+  *appointment_id : uuid <<PK>>
+  --
+  slot_id : uuid <<FK, unique>>
+  patient_id : uuid <<FK>>
+  department_id : uuid <<FK>>
+  status : enum
+  booked_at : timestamptz
+}
+entity QUEUE_ENTRY {
+  *queue_entry_id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK>>
+  checked_in_at : timestamptz
+  status : enum
+}
+entity ACCESS_GRANT {
+  *grant_id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  grantee_user_id : uuid <<FK>>
+  scope : enum[]
+  expires_at : timestamptz
+  revoked_at : timestamptz
+}
+entity AUDIT_LOG {
+  *audit_id : bigserial <<PK>>
+  --
+  user_id : uuid <<FK>>
+  patient_id : uuid <<FK, nullable>>
+  action : varchar
+  entity_ref : varchar
+  occurred_at : timestamptz
+}
+
+USER |o--o| PATIENT
+USER ||--o| STAFF
+DEPARTMENT ||--o{ STAFF
+STAFF ||--o{ SCHEDULE
+SCHEDULE ||--o{ SLOT
+SLOT ||--o| APPOINTMENT
+PATIENT ||--o{ APPOINTMENT
+DEPARTMENT ||--o{ APPOINTMENT
+APPOINTMENT ||--o| QUEUE_ENTRY
+PATIENT ||--o{ ACCESS_GRANT
+USER ||--o{ ACCESS_GRANT
+USER ||--o{ AUDIT_LOG
+PATIENT |o--o{ AUDIT_LOG
+@enduml

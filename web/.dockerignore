@@ -1,0 +1,11 @@
+# node_modules must not be copied in: `npm ci` in the build stage installs the
+# Linux binaries this image needs, and a host (macOS) tree would shadow them.
+node_modules/
+.next/
+out/
+.DS_Store
+.git/
+.env
+.env.local
+Dockerfile
+README.md
