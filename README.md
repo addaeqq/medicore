@@ -11,4 +11,4 @@ Hospital Management System — Advanced Software Engineering capstone.
 docker compose up --build   # web :3000, api :4000, postgres :5433 — see DEPLOYMENT.md
 ```
 
-Documents: SRS v1.3 · Effort Estimation (UCP) v1.0 · Design v1.7 · Testing Report v1.4 · Debt Ledger v1.3 · User Manual v1.1 · Maintenance Plan v1.2.
+Documents: SRS v1.3 · Effort Estimation (UCP) v1.0 · Design v1.7 · Testing Report v1.4 · Debt Ledger v1.4 · User Manual v1.1 · Maintenance Plan v1.2.
