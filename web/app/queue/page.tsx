@@ -6,7 +6,7 @@ import { useMe } from "@/lib/useMe";
 import { api, ApiError, fmtWhen } from "@/lib/api";
 import { Badge, Button, Card, Empty, ErrorNote, Field, PageTitle, Select } from "@/components/ui";
 
-type Entry = { queue_entry_id: string; status: string; checked_in_at: string; priority: number; full_name: string; mrn: string; appointment_id: string; patient_id: string };
+type Entry = { queue_entry_id: string; status: string; checked_in_at: string; priority: number; full_name: string; mrn: string; appointment_id: string; patient_id: string; consultation_id: string | null; doctor_id: string | null };
 type Dept = { department_id: string; name: string };
 
 export default function Queue() {
@@ -76,6 +76,14 @@ export default function Queue() {
                   {isDoctor && q.status === "waiting" && (
                     <Button onClick={() => startConsultation(q)} disabled={starting === q.queue_entry_id}>
                       {starting === q.queue_entry_id ? "Opening…" : "Start consultation"}
+                    </Button>
+                  )}
+                  {/* The author can return to an unsigned consultation after navigating away;
+                      re-starting is impossible (the appointment has left checked_in) and
+                      emr.write would deny another doctor's note anyway. */}
+                  {isDoctor && q.consultation_id && q.doctor_id === profile.user.staffId && (
+                    <Button kind="quiet" onClick={() => router.push(`/consultations/${q.consultation_id}`)}>
+                      Continue consultation
                     </Button>
                   )}
                 </Card>

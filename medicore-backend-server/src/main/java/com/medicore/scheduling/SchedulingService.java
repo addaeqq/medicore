@@ -128,10 +128,15 @@ public class SchedulingService {
     public List<Map<String, Object>> departmentQueue(UUID departmentId) {
         return jdbc.queryForList("""
             SELECT q.queue_entry_id, q.status, q.checked_in_at, q.priority, p.full_name, p.mrn,
-                   a.appointment_id, a.patient_id
+                   a.appointment_id, a.patient_id,
+                   c.consultation_id, c.doctor_id
             FROM queue_entries q
             JOIN appointments a ON a.appointment_id = q.appointment_id
             JOIN patients p ON p.patient_id = a.patient_id
+            -- the open consultation behind an in_consultation row, so its author can return
+            -- to it after navigating away (FR-EMR-02: notes stay editable until signed)
+            LEFT JOIN consultations c
+                   ON c.appointment_id = a.appointment_id AND c.signed_at IS NULL
             WHERE a.department_id = ? AND q.status IN ('waiting','in_consultation')
             ORDER BY q.priority, q.checked_in_at
             """, departmentId);
