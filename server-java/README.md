@@ -117,6 +117,19 @@ UAT test data (from the vendor document): mobile money — any registered number
 amounts (e.g. GHS 0.10); card success — PAN 5123450000000008, CVV 100, expiry 01/39;
 card failure — PAN 3528000000000007, CVV 101, expiry 05/39.
 
+## Notifications (DD-08 — TD-02 and TD-08 retired)
+Booking confirmations, cancellations, 24h reminders and payment receipts are
+enqueued into a durable `notification_outbox` (Flyway V5) **in the same
+transaction** as the business change, deduplicated by `(template, ref_id)`.
+A scheduled worker drains it (`FOR UPDATE SKIP LOCKED`, exponential backoff to
+a terminal `failed` state after 8 attempts) through a vendor-neutral `MailPort`
+SMTP adapter. Unconfigured installations mark rows `skipped` — mail never
+blocks business flows.
+
+Configuration (env): `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASS`,
+`MAIL_FROM` (e.g. `MediCore HMS <no-reply@clinic.example>`). Any SMTP provider
+works (Resend, SendGrid, Gmail app password, Mailtrap for testing).
+
 ## Verification status (honest record for the testing report)
 Authored in a sandbox where Maven Central is unreachable, so the Spring layer could not
 be compiled there. What **was** machine-verified at authoring time:

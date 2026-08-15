@@ -30,14 +30,17 @@ public class SchedulingService {
     private final StaffRepository staff;
     private final JdbcTemplate jdbc;
     private final AuditService audit;
+    private final com.medicore.notifications.NotificationService notifications;
     private final int cancelCutoffHours;
 
     public SchedulingService(ScheduleRepository schedules, SlotRepository slots,
                              AppointmentRepository appointments, QueueEntryRepository queueEntries,
                              StaffRepository staff, JdbcTemplate jdbc, AuditService audit,
+                             com.medicore.notifications.NotificationService notifications,
                              @Value("${medicore.cancel-cutoff-hours:2}") int cancelCutoffHours) {
         this.schedules = schedules; this.slots = slots; this.appointments = appointments;
         this.queueEntries = queueEntries; this.staff = staff; this.jdbc = jdbc; this.audit = audit;
+        this.notifications = notifications;
         this.cancelCutoffHours = cancelCutoffHours;
     }
 
@@ -83,6 +86,7 @@ public class SchedulingService {
             slots.save(slot);
             audit.log(bookedByUserId, patientId, "appointment.book",
                 "appointments:" + appt.getAppointmentId(), null);
+            notifications.appointmentBooked(appt.getAppointmentId()); // FR-APT-06: same-tx outbox (DD-08)
             return appt;
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(409, "Slot was just taken - please pick another"); // FR-APT-04
@@ -103,6 +107,7 @@ public class SchedulingService {
         appointments.save(appt);
         slot.setStatus("available");
         slots.save(slot);
+        notifications.appointmentCancelled(appointmentId); // FR-APT-06 (DD-08)
     }
 
     /** FR-APT-07: reception check-in -> queue entry (priority 100 default; triage lowers it, DD-06). */

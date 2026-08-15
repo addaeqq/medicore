@@ -20,11 +20,21 @@ spring:
   session:
     jdbc:
       initialize-schema: always       # Spring Session tables in the same PostgreSQL
+  mail:                                # DD-08: any SMTP provider (Resend/SendGrid/Gmail/Mailtrap)
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASS:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
   flyway:
     locations: ${FLYWAY_LOCATIONS:classpath:db/migration}   # add ,classpath:db/seed for demo deploys
     enabled: true
 
 medicore:
+  mail:
+    from: ${MAIL_FROM:}                 # e.g. "MediCore HMS <no-reply@yourclinic.example>"
   cors-origin: ${CORS_ORIGIN:http://localhost:3000}
   itc:                                # ITC Transflow Checkout (SRS OI-5 resolved; DD-07 adapter)
     base-url: ${ITC_BASE_URL:https://apisuat.itcsrvc.com/checkout}   # UAT default; LIVE: https://apis.itcsrvc.com/checkout

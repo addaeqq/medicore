@@ -18,6 +18,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation") // Jakarta Bean Validation (NFR-SEC-02)
     implementation("org.springframework.boot:spring-boot-starter-security")   // headers, BCrypt (FR-AUTH-02)
     implementation("org.springframework.session:spring-session-jdbc")         // DD-02: sessions in PostgreSQL
+    implementation("org.springframework.boot:spring-boot-starter-mail")       // DD-08: SMTP adapter behind MailPort
     implementation("org.flywaydb:flyway-core")                                 // NFR-MNT-03: versioned migrations
     implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")

@@ -32,13 +32,16 @@ public class BillingService {
     private final InvoiceItemRepository items;
     private final PaymentRepository payments;
     private final PaymentGateway gateway;
+    private final com.medicore.notifications.NotificationService notifications;
     private final JdbcTemplate jdbc;
     private final AuditService audit;
 
     public BillingService(InvoiceRepository invoices, InvoiceItemRepository items,
                           PaymentRepository payments, PaymentGateway gateway,
-                          JdbcTemplate jdbc, AuditService audit) {
+                          JdbcTemplate jdbc, AuditService audit,
+                          com.medicore.notifications.NotificationService notifications) {
         this.invoices = invoices; this.items = items; this.payments = payments;
+        this.notifications = notifications;
         this.gateway = gateway; this.jdbc = jdbc; this.audit = audit;
     }
 
@@ -152,6 +155,7 @@ public class BillingService {
         refreshStatus(inv);
         audit.log(clerk.userId(), inv.getPatientId(), "payment.record",
             "payments:" + p.getPaymentId(), "{\"method\":\"" + method + "\",\"amount\":" + amount + "}");
+        notifications.paymentReceived(p.getPaymentId(), amount); // FR-APT-06 family: receipt (DD-08)
         return p;
     }
 
@@ -228,6 +232,7 @@ public class BillingService {
             payments.save(p);
             refreshStatus(inv);
             audit.log(null, inv.getPatientId(), "payment.verified", "payments:" + p.getPaymentId(), null);
+            notifications.paymentReceived(p.getPaymentId(), p.getAmount()); // receipt (DD-08)
             return Map.of("status", "paid");
         } else {
             p.setStatus("failed");
