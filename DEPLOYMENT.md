@@ -30,7 +30,7 @@ of clinic history behind today and four weeks of bookable slots ahead.
 | Pharmacist — Pharm. Kojo Asante | `pharmacist@medicore.test` | Five prescriptions on the worklist (two written this morning, two part-dispensed) and three lines below reorder level |
 | Billing clerk — Gifty Owusu-Ansah | `billing@medicore.test` | 19 invoices across draft / issued / partially paid / paid / void |
 | Management — Bright Agyeman | `management@medicore.test` | Invoice review and void-with-reason |
-| Sys admin — Nana Kwaku Antwi | `admin@medicore.test` | Publishes weekly clinics |
+| Sys admin — Nana Kwaku Antwi | `admin@medicore.test` | **Staff accounts** — add doctors, nurses and other staff, deactivate leavers, clear lockouts — and publishes weekly clinics |
 
 Other staff use the same password: doctors `k.boateng@`, `e.sarpong@`, `a.owusu@`,
 `a.frimpong@`, `y.antwi@`, `s.agbeko@`; nurses `c.adjei@`, `g.amponsah@`,

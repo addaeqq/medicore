@@ -35,6 +35,7 @@ const CARDS: Record<string, { href: string; title: string; body: string }[]> = {
     { href: "/billing", title: "Invoices", body: "Review and void with a recorded reason." },
   ],
   sys_admin: [
+    { href: "/staff", title: "Staff accounts", body: "Add doctors, nurses and other staff; deactivate leavers." },
     { href: "/admin", title: "Doctor schedules", body: "Publish weekly clinics; slots generate automatically." },
     { href: "/book", title: "Book for a patient", body: "Front-desk booking tools." },
   ],
