@@ -2,6 +2,8 @@
 
 Hospital Management System — Advanced Software Engineering capstone.
 
+Kelvin Addae Kwarteng · 22427564
+
 | Path | Contents |
 |---|---|
 | `web/` | Next.js front end (role-aware UI; verified: build + live booking E2E) |
