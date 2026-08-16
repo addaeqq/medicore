@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> integrity(DataIntegrityViolationException e) {
         return ResponseEntity.status(409).body(Map.of("error", "Conflict with existing data"));
+    }
+
+    /**
+     * An unknown URL is a 404, not an internal error. Spring Boot 3.2 turned
+     * throw-exception-if-no-handler-found on by default, so a mistyped path reaches the
+     * catch-all below and reports "Internal error" — misleading, and it makes a client
+     * mistake look like a server fault in the logs. Both not-found shapes are handled:
+     * NoHandlerFoundException when no mapping matches, NoResourceFoundException when the
+     * request falls through to the static resource handler.
+     */
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<Map<String, Object>> notFound(Exception e) {
+        return ResponseEntity.status(404).body(Map.of("error", "Not found"));
     }
 
     @ExceptionHandler(Exception.class)
