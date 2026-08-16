@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Shell from "@/components/Shell";
 import { useMe } from "@/lib/useMe";
 import { api, ApiError, fmtWhen } from "@/lib/api";
@@ -21,6 +22,8 @@ type LabOrder = {
 export default function EmrPage() {
   const { profile, loading } = useMe();
   const { id } = useParams<{ id: string }>();
+  // set when the record was opened from a consultation, so the doctor can get back to it
+  const cameFrom = useSearchParams().get("from");
   const [emr, setEmr] = useState<Emr | null>(null);
   const [labs, setLabs] = useState<LabOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +56,11 @@ export default function EmrPage() {
   return (
     <Shell profile={profile}>
       <PageTitle eyebrow="Clinical record">Medical record</PageTitle>
+      {cameFrom && (
+        <p className="-mt-2 mb-4 text-sm">
+          <Link className="text-[var(--theatre)] underline" href={`/consultations/${cameFrom}`}>← Back to the consultation</Link>
+        </p>
+      )}
       <ErrorNote message={error} />
       {emr && (
         <div className="grid lg:grid-cols-3 gap-4">

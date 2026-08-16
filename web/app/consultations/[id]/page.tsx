@@ -207,7 +207,9 @@ export default function ConsultationPage() {
             </Card>
           )}
           <p className="mt-4 text-sm">
-            <Link className="text-[var(--theatre)] underline" href={`/patients/${c.patient_id}/emr`}>Open full record</Link>
+            {/* carry the origin so the record can offer a way back (the record is a
+                read-only view; the consultation it was opened from stays editable) */}
+            <Link className="text-[var(--theatre)] underline" href={`/patients/${c.patient_id}/emr?from=${id}`}>Open full record</Link>
           </p>
         </>
       )}

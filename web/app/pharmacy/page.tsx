@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import { useMe } from "@/lib/useMe";
 import { api, ApiError, fmtMoney, fmtWhen } from "@/lib/api";
-import { Badge, Button, Card, Empty, ErrorNote, Field, Input, PageTitle } from "@/components/ui";
+import { Badge, Button, Card, Empty, ErrorNote, Field, Input, PageTitle, Select } from "@/components/ui";
 
 type WorkRow = { prescription_id: string; status: string; created_at: string; patient: string; mrn: string; item_count: number };
 type Detail = {
@@ -20,6 +20,7 @@ export default function Pharmacy() {
   const [qty, setQty] = useState<Record<string, string>>({});
   const [drugs, setDrugs] = useState<DrugRow[]>([]);
   const [batch, setBatch] = useState({ drugId: "", batchNo: "", expiryDate: "", qty: "" });
+  const [drug, setDrug] = useState({ genericName: "", brandName: "", form: "tablet", strength: "", unitPrice: "", reorderLevel: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -49,6 +50,29 @@ export default function Pharmacy() {
       setDetail(null); refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Dispense failed");
+    } finally { setBusy(false); }
+  }
+
+  /** FR-PHM-04: add a drug to the formulary, so stock can be received against it and
+   *  doctors can prescribe it — prescribing is formulary-only by design (drug_id is an FK,
+   *  and FEFO dispensing, stock decrement and billing all key off the drug row). */
+  async function addDrug() {
+    setBusy(true); setError(null);
+    try {
+      const out = await api.post<{ drugId: string }>("/api/inventory/drugs", {
+        genericName: drug.genericName.trim(),
+        brandName: drug.brandName.trim() || null,
+        form: drug.form.trim(),
+        strength: drug.strength.trim(),
+        unitPrice: parseFloat(drug.unitPrice),
+        // left blank means "use the house default" (10), not "never warn" (0)
+        reorderLevel: drug.reorderLevel === "" ? null : parseInt(drug.reorderLevel, 10),
+      });
+      setDrug({ genericName: "", brandName: "", form: "tablet", strength: "", unitPrice: "", reorderLevel: "" });
+      refresh();
+      setBatch(b => ({ ...b, drugId: out.drugId })); // pre-select it for the first delivery
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add the drug");
     } finally { setBusy(false); }
   }
 
@@ -131,6 +155,34 @@ export default function Pharmacy() {
                 ))}
               </tbody>
             </table>
+          </Card>
+          <Card className="mt-4">
+            <h3 className="text-xs uppercase tracking-wider text-[var(--ink)]/60 mb-3">Add a drug to the formulary</h3>
+            <p className="text-xs text-[var(--ink)]/50 mb-3">
+              A drug must exist here before stock can be received against it or a doctor can prescribe it.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Generic name"><Input value={drug.genericName} onChange={e => setDrug(d => ({ ...d, genericName: e.target.value }))} /></Field>
+              <Field label="Brand name (optional)"><Input value={drug.brandName} onChange={e => setDrug(d => ({ ...d, brandName: e.target.value }))} /></Field>
+              <Field label="Form">
+                <Select value={drug.form} onChange={e => setDrug(d => ({ ...d, form: e.target.value }))}>
+                  <option value="tablet">Tablet</option>
+                  <option value="capsule">Capsule</option>
+                  <option value="syrup">Syrup</option>
+                  <option value="suspension">Suspension</option>
+                  <option value="injection">Injection</option>
+                  <option value="cream">Cream</option>
+                  <option value="drops">Drops</option>
+                </Select>
+              </Field>
+              <Field label="Strength"><Input value={drug.strength} onChange={e => setDrug(d => ({ ...d, strength: e.target.value }))} /></Field>
+              <Field label="Unit price (GHS)"><Input type="number" min={0} step="0.01" value={drug.unitPrice} onChange={e => setDrug(d => ({ ...d, unitPrice: e.target.value }))} /></Field>
+              <Field label="Reorder level"><Input type="number" min={0} value={drug.reorderLevel} onChange={e => setDrug(d => ({ ...d, reorderLevel: e.target.value }))} /></Field>
+            </div>
+            <Button onClick={addDrug}
+              disabled={busy || !drug.genericName.trim() || !drug.strength.trim() || drug.unitPrice === ""}>
+              Add drug
+            </Button>
           </Card>
           <Card className="mt-4">
             <h3 className="text-xs uppercase tracking-wider text-[var(--ink)]/60 mb-3">Receive stock</h3>
