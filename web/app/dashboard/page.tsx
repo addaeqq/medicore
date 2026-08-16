@@ -37,6 +37,7 @@ const CARDS: Record<string, { href: string; title: string; body: string }[]> = {
   sys_admin: [
     { href: "/staff", title: "Staff accounts", body: "Add doctors, nurses and other staff; deactivate leavers." },
     { href: "/admin", title: "Doctor schedules", body: "Publish weekly clinics; slots generate automatically." },
+    { href: "/catalogues", title: "Reference catalogues", body: "Laboratory tests and departments the clinical screens pick from." },
     { href: "/book", title: "Book for a patient", body: "Front-desk booking tools." },
   ],
 };

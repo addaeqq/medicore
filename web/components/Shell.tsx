@@ -46,6 +46,7 @@ const NAV: Record<string, { href: string; label: string }[]> = {
     { href: "/dashboard", label: "Overview" },
     { href: "/staff", label: "Staff" },
     { href: "/admin", label: "Schedules" },
+    { href: "/catalogues", label: "Catalogues" },
     { href: "/book", label: "Book for patient" },
   ],
 };

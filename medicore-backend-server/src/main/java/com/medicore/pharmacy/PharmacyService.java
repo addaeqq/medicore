@@ -191,9 +191,23 @@ public class PharmacyService {
 
     // ---------- Inventory (FR-PHM-04/06) ----------
 
+    /**
+     * FR-PHM-04. The duplicate check is here for the message; uq_drugs_identity (V901) is the
+     * invariant — a near-duplicate splits stock across two drug_ids and lets FEFO and billing
+     * key off whichever row the prescriber picked.
+     */
     @Transactional
     public Drug createDrug(String genericName, String brandName, String form, String strength,
                            BigDecimal unitPrice, Integer reorderLevel) {
+        Long existing = jdbc.queryForObject("""
+            SELECT count(*) FROM drugs
+            WHERE lower(btrim(generic_name)) = lower(btrim(?))
+              AND lower(btrim(strength))     = lower(btrim(?))
+              AND lower(btrim(form))         = lower(btrim(?))
+              AND lower(btrim(coalesce(brand_name, ''))) = lower(btrim(coalesce(?, '')))
+            """, Long.class, genericName, strength, form, brandName);
+        if (existing != null && existing > 0)
+            throw new ApiException(409, "That drug is already in the formulary");
         return drugs.save(new Drug(genericName, brandName, form, strength, unitPrice,
             reorderLevel == null ? 10 : reorderLevel));
     }
